@@ -5,7 +5,7 @@ API locale : `http://192.168.2.133:3000/api` (IP Wi‑Fi du Mac — peut changer
 
 ## Annonces de test en base
 
-**27 annonces** dont **18 préfixées `[Démo]`** — toutes les 8 catégories couvertes.
+**100 annonces** de démonstration — toutes les 8 catégories couvertes.
 
 | Catégorie | Exemple démo |
 |-----------|----------------|

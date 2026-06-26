@@ -1,0 +1,16 @@
+---
+description: Contexte global Souk Tchad — marketplace Flutter + NestJS
+alwaysApply: true
+---
+
+# Souk Tchad
+
+Monorepo : `backend/` (NestJS), `mobile/` (Flutter), `scripts/`, `docs/`.
+
+- Langue utilisateur : **français**.
+- Ne pas committer secrets (`.env`, `dart_defines.json`).
+- Mobile : lancer via `write-dart-defines.sh` puis `--dart-define-from-file=dart_defines.json`.
+- Auth : OTP 6 chiffres Gmail + Google Sign-In + suppression compte `DELETE /api/users/me`.
+- Seed démo : 100 annonces (`npm run seed:dev`).
+- Web : 6 colonnes grille accueil ; cache mémoire (pas SQLite).
+- Voir `AGENTS.md` et `docs/HISTORIQUE-PROJET.md` pour le contexte complet.
