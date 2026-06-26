@@ -3,11 +3,16 @@ node_modules/
 .dart_tool/
 .packages
 build/
+backend/dist/
 
 # Environment
 .env
 .env.local
 *.env
+mobile/dart_defines.json
+
+# Archives
+*.zip
 
 # Uploads
 backend/uploads/
