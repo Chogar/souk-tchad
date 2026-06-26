@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.dart_tool/
+.packages
+build/
+
+# Environment
+.env
+.env.local
+*.env
+
+# Uploads
+backend/uploads/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flutter
+mobile/.flutter-plugins-dependencies
+mobile/ios/Pods/
+mobile/android/.gradle/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+lcov.info

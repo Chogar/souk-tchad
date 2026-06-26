@@ -1,0 +1,15 @@
+{
+  "_comment": "Console Firebase → Ajouter app Android → Télécharger google-services.json → Renommer en google-services.json",
+  "project_info": {
+    "project_id": "YOUR_PROJECT_ID"
+  },
+  "client": [
+    {
+      "client_info": {
+        "android_client_info": {
+          "package_name": "com.hassanechogar.souktchad"
+        }
+      }
+    }
+  ]
+}

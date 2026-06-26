@@ -1,0 +1,19 @@
+{
+  "name": "souk-tchad",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Souk Tchad — Chad Market monorepo",
+  "scripts": {
+    "db:setup": "bash scripts/setup-db.sh",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "backend:dev": "npm run start:dev --prefix backend",
+    "backend:build": "npm run build --prefix backend",
+    "mobile:run": "cd mobile && flutter run",
+    "mobile:ios": "bash scripts/run-iphone-simulator.sh",
+    "mobile:analyze": "cd mobile && flutter analyze",
+    "seed:dev": "npm run seed:dev --prefix backend",
+    "seed:dev:reset": "npm run seed:dev:reset --prefix backend",
+    "test:phase1": "bash scripts/phase1-test-api.sh"
+  }
+}

@@ -1,0 +1,72 @@
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/api_constants.dart';
+
+class ServerConfigService {
+  static const _urlKey = 'api_base_url';
+
+  String normalizeUrl(String raw) {
+    var url = raw.trim();
+    if (url.isEmpty) return ApiConstants.baseUrl;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'http://$url';
+    }
+    url = url.replaceAll(RegExp(r'/+$'), '');
+    if (!url.endsWith('/api')) {
+      url = '$url/api';
+    }
+    return url;
+  }
+
+  Future<String> loadBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    final builtIn = normalizeUrl(ApiConstants.baseUrl);
+    final saved = prefs.getString(_urlKey);
+
+    if (saved == null || saved.trim().isEmpty) {
+      await prefs.setString(_urlKey, builtIn);
+      return builtIn;
+    }
+
+    final normalized = normalizeUrl(saved);
+    final builtHost = Uri.tryParse(builtIn)?.host;
+    final savedHost = Uri.tryParse(normalized)?.host;
+
+    final savedIsLocalhost = savedHost == '127.0.0.1' || savedHost == 'localhost';
+    final builtIsLan = builtHost != null && builtHost.startsWith('192.168.');
+
+    // iPhone physique : 127.0.0.1 ne fonctionne jamais.
+    if (savedIsLocalhost && builtIsLan) {
+      await prefs.setString(_urlKey, builtIn);
+      return builtIn;
+    }
+
+    // Après réinstall Wi‑Fi : l'IP du Mac peut avoir changé.
+    if (builtIsLan &&
+        savedHost != null &&
+        savedHost.startsWith('192.168.') &&
+        builtHost != savedHost) {
+      await prefs.setString(_urlKey, builtIn);
+      return builtIn;
+    }
+
+    return normalized;
+  }
+
+  Future<void> saveBaseUrl(String raw) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_urlKey, normalizeUrl(raw));
+  }
+
+  Future<void> testConnection(String raw) async {
+    final url = normalizeUrl(raw);
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: url,
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+      ),
+    );
+    await dio.get('/listings');
+  }
+}
