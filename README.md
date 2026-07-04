@@ -105,6 +105,8 @@ npm run mobile:analyze # Analyser Flutter
 
 Checklist tests iPhone : [docs/PHASE1-TEST-IPHONE.md](docs/PHASE1-TEST-IPHONE.md)
 
+Déploiement backend LWS cPanel : [docs/DEPLOIEMENT-LWS-CPANEL.md](docs/DEPLOIEMENT-LWS-CPANEL.md)
+
 ## Équipe & Cursor
 
 Collaborateur : voir [docs/COLLABORATEUR-CURSOR.md](docs/COLLABORATEUR-CURSOR.md)  

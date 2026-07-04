@@ -1,0 +1,5 @@
+# Renommer en .npmrc dans le home SSH (~/) si npm échoue avec "permission denied"
+# Remplacer USERNAME par votre identifiant cPanel LWS
+prefix=/home/USERNAME/node_modules
+cache=/home/USERNAME/.npm
+registry=https://registry.npmjs.org/
