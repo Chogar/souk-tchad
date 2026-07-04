@@ -125,37 +125,10 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 ---
 
-## Phase 4 — Installer et builder (SSH)
+## Phase 4 — Configurer l'application Node.js (cPanel) **avant** npm
 
-```bash
-cd ~/souk-tchad/backend
-
-# Si erreur "permission denied" npm :
-# cp .npmrc.example ~/.npmrc  (adapter USERNAME)
-
-# Installer dépendances + compiler TypeScript
-npm ci
-npm run build
-
-# Créer les dossiers uploads (images, chat, etc.)
-mkdir -p uploads/listings/videos uploads/avatars uploads/voice uploads/chat/images uploads/chat/documents
-chmod -R 755 uploads
-
-# UNE SEULE FOIS : créer les tables + catégories
-npm run db:init-prod
-```
-
-Vérification locale sur le serveur :
-
-```bash
-node dist/main.js
-# Ctrl+C après test, ou laisser cPanel gérer le processus
-curl http://127.0.0.1:3000/api/categories
-```
-
----
-
-## Phase 5 — Configurer l'application Node.js (cPanel)
+Sur le terminal cPanel, `npm` n'est **pas** dans le PATH tant que l'app Node.js n'existe pas.
+Créez d'abord l'application pour générer le `nodevenv` :
 
 1. cPanel → **Setup Node.js App** (ou **Application Node.js**)
 2. Cliquez **Create Application**
@@ -171,11 +144,47 @@ curl http://127.0.0.1:3000/api/categories
 
 4. Cliquez **Add Variable** pour chaque variable de `.env` **OU** laissez le fichier `.env` (NestJS ConfigModule le charge automatiquement depuis la racine backend).
 
-5. **Run NPM Install** (bouton cPanel) si disponible, sinon déjà fait en SSH.
+5. **Ne démarrez pas encore** l'app (le build n'est pas fait). Notez la commande
+   **« Enter to the virtual environment »** affichée par cPanel (au cas où).
 
-6. Cliquez **Restart** / **Start**.
+> cPanel (Passenger) injecte souvent `PORT` automatiquement. Si l'app ne démarre pas plus tard, ajoutez la variable `PORT` affichée dans l'interface Node.js.
 
-> cPanel (Passenger) injecte souvent `PORT` automatiquement. Si l'app ne démarre pas, ajoutez la variable `PORT` affichée dans l'interface Node.js.
+---
+
+## Phase 5 — Installer, builder et init BDD (terminal cPanel)
+
+Dans le **terminal cPanel**, `npm` n'est pas reconnu tant que le `nodevenv` n'est pas activé.
+Utilisez les scripts fournis (ils activent automatiquement l'environnement Node.js) :
+
+```bash
+cd ~/souk-tchad/backend
+
+# Installer les dépendances
+bash scripts/cpanel-run.sh npm ci
+
+# Compiler TypeScript → dist/
+bash scripts/cpanel-run.sh npm run build
+
+# Dossiers uploads
+mkdir -p uploads/listings/videos uploads/avatars uploads/voice uploads/chat/images uploads/chat/documents
+chmod -R 755 uploads
+
+# UNE SEULE FOIS : créer les tables + catégories (sans npm dans le PATH)
+bash scripts/cpanel-db-init.sh
+```
+
+Si le script ne trouve pas `nodevenv`, activez-le manuellement avec la commande cPanel, puis :
+
+```bash
+source ~/nodevenv/souk-tchad/backend/20/bin/activate
+cd ~/souk-tchad/backend
+# (adaptez 20 → 24 selon la version choisie)
+npm ci
+npm run build
+node dist/database/seeds/init-production-schema.js
+```
+
+Ensuite dans **Setup Node.js App** → **Restart** / **Start**.
 
 ---
 
@@ -215,8 +224,8 @@ Dans [Google Cloud Console](https://console.cloud.google.com/) :
 cd ~/souk-tchad
 git pull
 cd backend
-npm ci
-npm run build
+bash scripts/cpanel-run.sh npm ci
+bash scripts/cpanel-run.sh npm run build
 # cPanel → Setup Node.js App → Restart
 ```
 
@@ -226,10 +235,11 @@ npm run build
 
 | Problème | Solution |
 |----------|----------|
+| `npm: command not found` | Utiliser `bash scripts/cpanel-run.sh …` ou activer le nodevenv cPanel |
 | `EACCES` npm | Configurer `~/.npmrc` (voir `.npmrc.example`) |
 | Erreur PostgreSQL | Vérifier user/base/privilèges cPanel |
 | 502 Bad Gateway | Restart app Node.js ; vérifier `dist/main.js` existe |
-| Tables manquantes | Relancer `npm run db:init-prod` (une fois) |
+| Tables manquantes | `bash scripts/cpanel-db-init.sh` (une fois, après le build) |
 | Images 404 | Vérifier permissions `uploads/` (755) |
 | Chat ne connecte pas | WebSocket limité sur mutualisé → VPS LWS si critique |
 | CORS | Déjà `origin: true` dans `main.ts` |
@@ -242,8 +252,8 @@ npm run build
 
 - [ ] Sous-domaine `apisouk.experiencetech-td.com` + SSL actif
 - [ ] Base PostgreSQL créée et `.env` rempli
-- [ ] `npm ci && npm run build` OK
-- [ ] `npm run db:init-prod` exécuté (1×)
+- [ ] `bash scripts/cpanel-run.sh npm ci` + `npm run build` OK
+- [ ] `bash scripts/cpanel-db-init.sh` exécuté (1×)
 - [ ] App Node.js cPanel démarrée
 - [ ] `GET /api/categories` répond en HTTPS
 - [ ] App mobile pointée vers l'URL prod
