@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -29,13 +28,20 @@ export class ListingsService {
     categoryId?: string;
     search?: string;
     city?: string;
+    page?: number;
+    limit?: number;
   }) {
+    const page = Math.max(filters?.page ?? 1, 1);
+    const limit = Math.min(Math.max(filters?.limit ?? 50, 1), 100);
+
     const qb = this.listingsRepository
       .createQueryBuilder('listing')
       .leftJoinAndSelect('listing.category', 'category')
       .leftJoinAndSelect('listing.user', 'user')
       .where('listing.status = :status', { status: ListingStatus.ACTIVE })
-      .orderBy('listing.createdAt', 'DESC');
+      .orderBy('listing.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
 
     if (filters?.categoryId) {
       qb.andWhere('listing.categoryId = :categoryId', {
@@ -70,20 +76,22 @@ export class ListingsService {
       }
     }
 
-    return qb.getMany();
+    const listings = await qb.getMany();
+    return listings.map((listing) => this.toPublicListing(listing));
   }
 
-  async findById(id: string): Promise<Listing> {
+  async findById(id: string) {
     const listing = await this.findByIdWithRelations(id);
-    return listing;
+    return this.toPublicListing(listing);
   }
 
-  async findByUser(userId: string): Promise<Listing[]> {
-    return this.listingsRepository.find({
+  async findByUser(userId: string) {
+    const listings = await this.listingsRepository.find({
       where: { userId },
       relations: { category: true, user: true },
       order: { createdAt: 'DESC' },
     });
+    return listings.map((listing) => this.toPublicListing(listing));
   }
 
   private async findByIdWithRelations(id: string): Promise<Listing> {
@@ -128,11 +136,11 @@ export class ListingsService {
     });
 
     const saved = await this.listingsRepository.save(listing);
-    return this.findByIdWithRelations(saved.id);
+    return this.toPublicListing(await this.findByIdWithRelations(saved.id));
   }
 
   async update(user: User, id: string, dto: UpdateListingDto) {
-    const listing = await this.findById(id);
+    const listing = await this.findByIdWithRelations(id);
     if (listing.userId !== user.id) {
       throw new ForbiddenException('Accès refusé');
     }
@@ -154,11 +162,20 @@ export class ListingsService {
     }
 
     if (images !== undefined) {
-      listing.images = images.slice(0, 5);
+      // N’accepter que des chemins d’uploads listings appartenant au préfixe attendu.
+      listing.images = images
+        .filter((path) => typeof path === 'string' && path.startsWith('/uploads/listings/'))
+        .slice(0, 5);
     }
 
     if (videos !== undefined) {
-      listing.videos = videos.slice(0, 1);
+      listing.videos = videos
+        .filter(
+          (path) =>
+            typeof path === 'string' &&
+            path.startsWith('/uploads/listings/videos/'),
+        )
+        .slice(0, 1);
     }
 
     if (dto.title || dto.description || dto.price || dto.categoryId) {
@@ -179,37 +196,55 @@ export class ListingsService {
     }
 
     const saved = await this.listingsRepository.save(listing);
-    return this.findByIdWithRelations(saved.id);
+    return this.toPublicListing(await this.findByIdWithRelations(saved.id));
   }
 
   async addImages(user: User, id: string, imagePaths: string[]) {
-    const listing = await this.findById(id);
+    const listing = await this.findByIdWithRelations(id);
     if (listing.userId !== user.id) {
       throw new ForbiddenException('Accès refusé');
     }
 
     listing.images = [...listing.images, ...imagePaths].slice(0, 5);
     const saved = await this.listingsRepository.save(listing);
-    return this.findByIdWithRelations(saved.id);
+    return this.toPublicListing(await this.findByIdWithRelations(saved.id));
   }
 
   async addVideo(user: User, id: string, videoPath: string) {
-    const listing = await this.findById(id);
+    const listing = await this.findByIdWithRelations(id);
     if (listing.userId !== user.id) {
       throw new ForbiddenException('Accès refusé');
     }
 
     listing.videos = [videoPath];
     const saved = await this.listingsRepository.save(listing);
-    return this.findByIdWithRelations(saved.id);
+    return this.toPublicListing(await this.findByIdWithRelations(saved.id));
   }
 
   async remove(user: User, id: string): Promise<void> {
-    const listing = await this.findById(id);
+    const listing = await this.findByIdWithRelations(id);
     if (listing.userId !== user.id) {
       throw new ForbiddenException('Accès refusé');
     }
     await this.listingsRepository.remove(listing);
+  }
+
+  /** Masque e-mail / googleId du vendeur sur les réponses publiques. */
+  private toPublicListing(listing: Listing) {
+    const { user, ...rest } = listing;
+    return {
+      ...rest,
+      user: user
+        ? {
+            id: user.id,
+            name: user.name,
+            avatarUrl: user.avatarUrl,
+            phone: user.phone,
+            plan: user.plan,
+            isEmailVerified: user.isEmailVerified,
+          }
+        : undefined,
+    };
   }
 
   private resolveCustomCategoryName(
@@ -222,9 +257,7 @@ export class ListingsService {
 
     const name = customCategoryName?.trim();
     if (!name || name.length < 2) {
-      throw new BadRequestException(
-        'Indiquez une catégorie personnalisée (minimum 2 caractères).',
-      );
+      return 'Divers';
     }
 
     return name.slice(0, 80);

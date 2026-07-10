@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,18 +10,21 @@ import '../../../core/models/user_model.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/providers/locale_provider.dart';
-import '../../../core/providers/server_config_provider.dart';
-import '../../home/providers/listings_provider.dart';
 import '../../../core/services/subscriptions_service.dart';
 import '../../subscriptions/providers/plans_provider.dart';
+import '../../subscriptions/widgets/payment_modal.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/providers/theme_mode_provider.dart';
 import '../../../core/widgets/keyboard_scroll_view.dart';
+import '../../../core/layout/responsive_center.dart';
+import '../../auth/screens/login_screen.dart';
 import '../widgets/profile_hub_widgets.dart';
 import '../../listings/providers/my_listings_provider.dart';
+import '../../listings/screens/create_listing_screen.dart';
 import '../../listings/utils/delete_listing_helper.dart';
 import '../../listings/widgets/my_listing_tile.dart';
+import '../../admin/widgets/admin_collapsible_payment_settings.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -33,15 +38,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _phoneController = TextEditingController();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
-  final _serverUrlController = TextEditingController();
   bool _isSaving = false;
   String? _changingPlanId;
   bool _infoExpanded = false;
   bool _subscriptionExpanded = false;
   bool _securityExpanded = false;
-  bool _serverExpanded = false;
   String? _syncedProfileKey;
-  String? _syncedServerUrl;
 
   @override
   void dispose() {
@@ -49,7 +51,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _phoneController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
-    _serverUrlController.dispose();
     super.dispose();
   }
 
@@ -81,63 +82,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(ref.read(stringsProvider).profilePhotoUpdated)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(apiErrorMessage(e, ref.read(stringsProvider)))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  void _syncServerUrlField(String url) {
-    if (_syncedServerUrl == url) return;
-    _syncedServerUrl = url;
-    _serverUrlController.text = url;
-  }
-
-  Future<void> _testServerConnection() async {
-    final strings = ref.read(stringsProvider);
-    setState(() => _isSaving = true);
-    try {
-      await ref
-          .read(apiBaseUrlProvider.notifier)
-          .testConnection(_serverUrlController.text);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(strings.connectionOk)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(strings.connectionFailed(apiErrorMessage(e, strings)))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  Future<void> _saveServerUrl() async {
-    final strings = ref.read(stringsProvider);
-    setState(() => _isSaving = true);
-    try {
-      final url = await ref
-          .read(apiBaseUrlProvider.notifier)
-          .saveAndApply(_serverUrlController.text);
-      _syncServerUrlField(url);
-      ref.read(chatServiceProvider).disconnect();
-      ref.invalidate(listingsProvider);
-      ref.invalidate(myListingsProvider);
-      await ref.read(authStateProvider.notifier).refreshUser(force: true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(strings.serverUrlSaved)),
         );
       }
     } catch (e) {
@@ -282,7 +226,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required AppLocale locale,
   }) {
     final themePref = ref.watch(themeModeProvider);
-    final serverUrl = ref.watch(apiBaseUrlProvider).value;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -318,62 +261,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           onTap: () => ref.read(themeModeProvider.notifier).toggle(),
         ),
-        const SizedBox(height: 8),
-        ProfileSettingsTile(
-          leadingIcon: Icons.wifi_tethering,
+      ],
+    );
+  }
+
+  Widget _buildAdminSection(AppStrings strings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ProfileSectionHeader(title: strings.adminSectionTitle),
+        ProfileLinkTile(
+          icon: Icons.admin_panel_settings_rounded,
           leadingColor: AppColors.primaryBlue,
-          title: strings.serverConnection,
-          trailing: Icon(
-            _serverExpanded ? Icons.expand_less : Icons.chevron_right,
-            color: Colors.grey.shade400,
-          ),
-          onTap: () => setState(() => _serverExpanded = !_serverExpanded),
-        ),
-        if (_serverExpanded) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(14),
+          title: strings.adminDashboardLink,
+          subtitle: strings.adminDashboardSubtitle,
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
+              color: AppColors.accentGold.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(999),
             ),
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _serverUrlController,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    labelText: strings.serverUrl,
-                    hintText: serverUrl ?? strings.serverUrlHint,
-                    prefixIcon: const Icon(Icons.dns_outlined),
-                    helperText: strings.serverUrlHelper,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isSaving ? null : _testServerConnection,
-                        icon: const Icon(Icons.wifi_find),
-                        label: Text(strings.testConnection),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _isSaving ? null : _saveServerUrl,
-                        icon: const Icon(Icons.save_outlined),
-                        label: Text(strings.save),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            child: const Text(
+              'Admin',
+              style: TextStyle(
+                color: Color(0xFF8A6D00),
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
-        ],
+          onTap: () => context.push('/admin'),
+        ),
+        const SizedBox(height: 12),
+        const AdminCollapsiblePaymentSettings(),
       ],
     );
   }
@@ -390,6 +310,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             context: context,
             title: strings.privacyPolicy,
             body: strings.privacyPolicyBody,
+            actionLabel: strings.openWebsite,
+            onAction: () => _launchUri(strings.privacyPolicyUrl),
           ),
         ),
         const SizedBox(height: 8),
@@ -400,6 +322,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             context: context,
             title: strings.termsOfUse,
             body: strings.termsBody,
+            actionLabel: strings.openWebsite,
+            onAction: () => _launchUri(strings.termsOfUseUrl),
           ),
         ),
         const SizedBox(height: 8),
@@ -433,44 +357,77 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       path: strings.supportEmail,
       queryParameters: {'subject': 'Support Souk Tchad'},
     );
+    await _launchUri(uri.toString());
+  }
+
+  Future<void> _launchUri(String url) async {
+    final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.supportEmail)),
+        SnackBar(content: Text(url)),
       );
     }
   }
 
-  void _openLoginRegister() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.login),
-                title: Text(ref.read(stringsProvider).login),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.go('/login');
-                },
+  Future<void> _logout() async {
+    final strings = ref.read(stringsProvider);
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(strings.logout),
+            content: Text(strings.logoutConfirm),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(strings.cancel),
               ),
-              ListTile(
-                leading: const Icon(Icons.person_add_outlined),
-                title: Text(ref.read(stringsProvider).createAccount),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push('/register');
-                },
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accentRed,
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(strings.logout),
               ),
             ],
           ),
-        ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) return;
+
+    await ref.read(authStateProvider.notifier).logout();
+  }
+
+  void _openLoginRegister() {
+    showLoginModal(context);
+  }
+
+  void _goBack() {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    ref.read(shellTabIndexProvider.notifier).setIndex(0);
+  }
+
+  PreferredSizeWidget _profileAppBar(AppStrings strings, {bool showLogout = false}) {
+    return AppBar(
+      backgroundColor: AppColors.backgroundLight,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+        onPressed: _goBack,
       ),
+      title: Text(strings.profile),
+      actions: [
+        if (showLogout)
+          IconButton(
+            tooltip: strings.logout,
+            icon: const Icon(Icons.logout, color: AppColors.accentRed),
+            onPressed: () => unawaited(_logout()),
+          ),
+      ],
     );
   }
 
@@ -518,42 +475,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     });
 
-    final user = ref.watch(authStateProvider).value;
+    final authAsync = ref.watch(authStateProvider);
+    final user = authAsync.asData?.value;
     final plansAsync = ref.watch(plansProvider);
     final myListingsAsync = ref.watch(myListingsProvider);
     final api = ref.watch(apiServiceProvider);
     final strings = ref.watch(stringsProvider);
     final locale = ref.watch(localeProvider);
-    final serverUrl = ref.watch(apiBaseUrlProvider).value;
-    if (serverUrl != null) {
-      _syncServerUrlField(serverUrl);
-    }
 
     if (user == null) {
       return Scaffold(
         backgroundColor: AppColors.backgroundLight,
+        appBar: _profileAppBar(strings),
         body: SafeArea(
           child: KeyboardScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ProfileHubTitle(text: strings.guestProfileTitle),
-                ProfileHeroCard(
-                  title: strings.guestProfileTitle,
-                  subtitle: strings.guestProfileCardSubtitle,
-                  showAppLogo: true,
-                ),
-                const SizedBox(height: 16),
-                ProfileHubButton(
-                  label: strings.loginOrRegister,
-                  onPressed: _openLoginRegister,
-                ),
-                const SizedBox(height: 24),
-                _buildAppSettings(strings: strings, locale: locale),
-                const SizedBox(height: 20),
-                _buildAboutSupport(strings),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            child: ResponsiveCenter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ProfileHubTitle(text: strings.guestProfileTitle),
+                  ProfileHeroCard(
+                    title: strings.guestProfileTitle,
+                    subtitle: strings.guestProfileCardSubtitle,
+                    showAppLogo: true,
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileHubButton(
+                    label: strings.loginOrRegister,
+                    onPressed: _openLoginRegister,
+                  ),
+                  const SizedBox(height: 24),
+                  _buildAppSettings(strings: strings, locale: locale),
+                  const SizedBox(height: 20),
+                  _buildAboutSupport(strings),
+                ],
+              ),
             ),
           ),
         ),
@@ -569,20 +526,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: AppColors.backgroundLight,
+      appBar: _profileAppBar(strings, showLogout: true),
       body: SafeArea(
         child: KeyboardScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ProfileHubTitle(text: strings.guestProfileTitle),
-              ProfileHeroCard(
-                title: user.name,
-                subtitle: strings.profileHeroLoggedIn(listingsCount, user.plan),
-                avatar: _userAvatarWidget(user: user, avatarUrl: avatarUrl),
-                onAvatarTap: _pickAvatar,
-                isSaving: _isSaving,
-              ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          child: ResponsiveCenter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ProfileHubTitle(text: strings.guestProfileTitle),
+                ProfileHeroCard(
+                  title: user.name,
+                  subtitle: strings.profileHeroLoggedIn(listingsCount, user.plan),
+                  avatar: _userAvatarWidget(user: user, avatarUrl: avatarUrl),
+                  onAvatarTap: _pickAvatar,
+                  isSaving: _isSaving,
+                ),
               const SizedBox(height: 12),
               Text(
                 user.email,
@@ -593,6 +552,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  onTap: () {
+                    unawaited(_logout());
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.accentRed),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.logout, color: AppColors.accentRed),
+                        const SizedBox(width: 8),
+                        Text(
+                          strings.logout,
+                          style: const TextStyle(
+                            color: AppColors.accentRed,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -600,7 +596,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: Icons.add_circle_outline,
                       label: strings.publish,
                       color: AppColors.accentRed,
-                      onTap: () => context.push('/create-listing'),
+                      onTap: () => showCreateListingModal(context),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -615,6 +611,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
               const SizedBox(height: 24),
+              if (user.isAdmin) ...[
+                _buildAdminSection(strings),
+                const SizedBox(height: 24),
+              ],
               _buildAppSettings(strings: strings, locale: locale),
               const SizedBox(height: 20),
               ProfileSectionHeader(title: strings.myProfile),
@@ -709,7 +709,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         if (listings.isEmpty) {
                           return _EmptyListingsPrompt(
                             strings: strings,
-                            onPublish: () => context.push('/create-listing'),
+                            onPublish: () => showCreateListingModal(context),
                           );
                         }
                         return Column(
@@ -829,10 +829,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 onSelect: isCurrent || _changingPlanId != null
                                     ? null
                                     : () async {
+                                        if (plan.paymentRequired) {
+                                          await showPaymentModal(
+                                            context: context,
+                                            plan: plan,
+                                          );
+                                          return;
+                                        }
                                         setState(
                                           () => _changingPlanId = plan.id,
                                         );
                                         try {
+                                          final stringsNow =
+                                              ref.read(stringsProvider);
                                           final updated = await ref
                                               .read(
                                                   subscriptionsServiceProvider)
@@ -845,7 +854,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
                                               SnackBar(
-                                                content: Text(strings
+                                                content: Text(stringsNow
                                                     .planActivated(plan.name)),
                                               ),
                                             );
@@ -855,8 +864,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
                                               SnackBar(
-                                                content:
-                                                    Text(apiErrorMessage(e, ref.read(stringsProvider))),
+                                                content: Text(apiErrorMessage(
+                                                    e,
+                                                    ref.read(
+                                                        stringsProvider))),
                                               ),
                                             );
                                           }
@@ -922,17 +933,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: 20),
               _buildAboutSupport(strings),
               const SizedBox(height: 20),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    ref.read(authStateProvider.notifier).logout(),
-                icon: const Icon(Icons.logout, color: AppColors.accentRed),
-                label: Text(
-                  strings.logout,
-                  style: const TextStyle(color: AppColors.accentRed),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.accentRed),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => unawaited(_logout()),
+                  icon: const Icon(Icons.logout, color: AppColors.accentRed),
+                  label: Text(
+                    strings.logout,
+                    style: const TextStyle(color: AppColors.accentRed),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.accentRed),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -945,6 +958,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

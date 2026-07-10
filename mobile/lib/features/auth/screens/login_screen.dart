@@ -6,14 +6,48 @@ import '../../../core/providers/server_config_provider.dart';
 import '../../home/providers/listings_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/widgets/app_logo.dart';
-import '../../../core/widgets/keyboard_scroll_view.dart';
-import '../../../core/widgets/server_url_panel.dart';
 import '../../../core/utils/google_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/api_error.dart';
 
+/// Opens an improved login form in a centered modal dialog.
+Future<void> showLoginModal(
+  BuildContext context, {
+  String? redirectPath,
+}) {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierColor: Colors.black.withValues(alpha: 0.45),
+    builder: (dialogContext) {
+      return Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420, maxHeight: 720),
+          child: LoginScreen(
+            asModal: true,
+            redirectPath: redirectPath,
+            onClose: () => Navigator.of(dialogContext).pop(),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({
+    super.key,
+    this.asModal = false,
+    this.redirectPath,
+    this.onClose,
+  });
+
+  final bool asModal;
+  final String? redirectPath;
+  final VoidCallback? onClose;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -115,14 +149,276 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         lower.contains('غير موثق');
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Future<void> _onLoginSuccess() async {
+    try {
+      await ref.read(apiBaseUrlProvider.future);
+      await ref.read(listingsProvider(defaultListingsFilter).future);
+    } catch (_) {}
+    if (!mounted) return;
+
+    final redirect = widget.redirectPath ??
+        (widget.asModal
+            ? null
+            : GoRouterState.of(context).uri.queryParameters['redirect']);
+
+    if (widget.asModal) {
+      widget.onClose?.call();
+      if (redirect != null && redirect.isNotEmpty && context.mounted) {
+        context.go(redirect);
+      }
+      return;
+    }
+
+    if (redirect != null && redirect.isNotEmpty) {
+      context.go(redirect);
+    } else {
+      context.go('/');
+    }
+  }
+
+  InputDecoration _fieldDecoration({
+    required String label,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: AppColors.primaryBlue),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: const Color(0xFFF7F8FA),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    );
+  }
+
+  Widget _buildForm(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final strings = ref.watch(stringsProvider);
-    final serverUrl = ref.watch(apiBaseUrlProvider).value;
-    final showServerConfig = serverUrl == null ||
-        serverUrl.contains('127.0.0.1') ||
-        serverUrl.contains('localhost');
+    final busy = _isLoading || authState.isLoading;
+
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            enableSuggestions: false,
+            decoration: _fieldDecoration(
+              label: strings.email,
+              icon: Icons.email_outlined,
+            ),
+            validator: (v) =>
+                v != null && v.contains('@') ? null : strings.invalidEmail,
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _submit(),
+            autocorrect: false,
+            enableSuggestions: false,
+            decoration: _fieldDecoration(
+              label: strings.password,
+              icon: Icons.lock_outline,
+              suffix: IconButton(
+                tooltip: _obscurePassword
+                    ? strings.showPassword
+                    : strings.hidePassword,
+                onPressed: () => setState(
+                  () => _obscurePassword = !_obscurePassword,
+                ),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+              ),
+            ),
+            validator: (v) =>
+                v != null && v.length >= 6 ? null : strings.minPassword,
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              SizedBox(
+                height: 36,
+                child: Checkbox(
+                  value: _rememberMe,
+                  onChanged: (value) =>
+                      setState(() => _rememberMe = value ?? false),
+                  activeColor: AppColors.primaryBlue,
+                ),
+              ),
+              Expanded(child: Text(strings.rememberMe)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 48,
+            child: FilledButton(
+              onPressed: busy ? null : _submit,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: busy
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      strings.login,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: Divider(color: Colors.grey.shade300)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'ou',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              Expanded(child: Divider(color: Colors.grey.shade300)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: busy ? null : _googleLogin,
+              icon: const Icon(Icons.g_mobiledata, size: 28),
+              label: Text(strings.googleLogin),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+                side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          TextButton(
+            onPressed: () {
+              if (widget.asModal) widget.onClose?.call();
+              context.push('/register');
+            },
+            child: Text(
+              strings.createAccount,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.accentRed,
+              ),
+            ),
+          ),
+          if (!widget.asModal) ...[
+            TextButton(
+              onPressed: () => context.go('/'),
+              child: Text(strings.browseWithoutAccount),
+            ),
+            TextButton(
+              onPressed: () async {
+                await ref.read(credentialsServiceProvider).clear();
+                setState(() {
+                  _rememberMe = false;
+                  _emailController.clear();
+                  _passwordController.clear();
+                });
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(strings.credentialsCleared)),
+                  );
+                }
+              },
+              child: Text(strings.clearCredentials),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final strings = ref.watch(stringsProvider);
+    return Column(
+      children: [
+        if (widget.asModal)
+          Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              onPressed: widget.onClose,
+              icon: const Icon(Icons.close),
+            ),
+          ),
+        AppLogo(size: widget.asModal ? 88 : 140),
+        const SizedBox(height: 10),
+        Text(
+          strings.appName,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppColors.primaryBlue,
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          strings.appTagline,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          strings.loginOrRegister,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = ref.watch(stringsProvider);
 
     ref.listen(authStateProvider, (previous, next) {
       if (next.hasError) {
@@ -167,160 +463,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final wasLoggedIn = previous?.value != null;
       final isLoggedIn = next.hasValue && next.value != null;
       if (!wasLoggedIn && isLoggedIn && !next.isLoading) {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          try {
-            await ref.read(apiBaseUrlProvider.future);
-            await ref.read(listingsProvider(defaultListingsFilter).future);
-          } catch (_) {}
-          if (!context.mounted) return;
-          final redirect =
-              GoRouterState.of(context).uri.queryParameters['redirect'];
-          if (redirect != null && redirect.isNotEmpty) {
-            context.go(redirect);
-          } else {
-            context.go('/');
-          }
-        });
+        WidgetsBinding.instance.addPostFrameCallback((_) => _onLoginSuccess());
       }
     });
 
     if (!_credentialsLoaded) {
-      return Scaffold(
+      if (widget.asModal) {
+        return const Material(
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          child: SizedBox(
+            height: 220,
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        );
+      }
+      return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildHeader(context),
+        const SizedBox(height: 20),
+        _buildForm(context),
+      ],
+    );
+
+    if (widget.asModal) {
+      return Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        elevation: 8,
+        shadowColor: Colors.black26,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 700),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
+            child: content,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: KeyboardScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 24),
-                const Center(child: AppLogo(size: 180)),
-                const SizedBox(height: 16),
-                Text(
-                  strings.appName,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: AppColors.primaryBlue,
-                        fontWeight: FontWeight.bold,
-                      ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                elevation: 2,
+                shadowColor: Colors.black12,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
+                  child: content,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  strings.appTagline,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-                if (showServerConfig) ...[
-                  const SizedBox(height: 24),
-                  ServerUrlPanel(initiallyExpanded: true),
-                ],
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  decoration: InputDecoration(
-                    labelText: strings.email,
-                    prefixIcon: const Icon(Icons.email_outlined),
-                  ),
-                  validator: (v) =>
-                      v != null && v.contains('@') ? null : strings.invalidEmail,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _submit(),
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  decoration: InputDecoration(
-                    labelText: strings.password,
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      tooltip: _obscurePassword
-                          ? strings.showPassword
-                          : strings.hidePassword,
-                      onPressed: () => setState(
-                        () => _obscurePassword = !_obscurePassword,
-                      ),
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                    ),
-                  ),
-                  validator: (v) =>
-                      v != null && v.length >= 6 ? null : strings.minPassword,
-                ),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  value: _rememberMe,
-                  onChanged: (value) =>
-                      setState(() => _rememberMe = value ?? false),
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: Text(strings.rememberMe),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _isLoading || authState.isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(strings.login),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed:
-                      _isLoading || authState.isLoading ? null : _googleLogin,
-                  icon: const Icon(Icons.g_mobiledata, size: 28),
-                  label: Text(strings.googleLogin),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: AppColors.primaryBlue),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                TextButton(
-                  onPressed: () => context.go('/register'),
-                  child: Text(strings.createAccount),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/'),
-                  child: Text(strings.browseWithoutAccount),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    await ref.read(credentialsServiceProvider).clear();
-                    setState(() {
-                      _rememberMe = false;
-                      _emailController.clear();
-                      _passwordController.clear();
-                    });
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(strings.credentialsCleared)),
-                      );
-                    }
-                  },
-                  child: Text(strings.clearCredentials),
-                ),
-              ],
+              ),
             ),
           ),
         ),

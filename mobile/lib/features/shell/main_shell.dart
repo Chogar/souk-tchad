@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/providers/locale_provider.dart';
 import '../../core/providers/unread_messages_provider.dart';
@@ -9,6 +8,7 @@ import '../../core/widgets/ad_banner.dart';
 import '../chat/screens/conversations_screen.dart';
 import '../favorites/screens/favorites_screen.dart';
 import '../home/screens/home_screen.dart';
+import '../listings/screens/create_listing_screen.dart';
 import '../profile/screens/profile_screen.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -130,7 +130,7 @@ class _MainShellState extends ConsumerState<MainShell>
           const HomeScreen(),
           const FavoritesScreen(),
           const ConversationsScreen(),
-          ProfileScreen(key: ValueKey(user?.id ?? 'guest')),
+          ProfileScreen(key: ValueKey('profile-${user?.id ?? 'guest'}')),
         ],
       ),
       bottomNavigationBar: Column(
@@ -141,7 +141,7 @@ class _MainShellState extends ConsumerState<MainShell>
             selectedIndex: safeNavIndex,
             onDestinationSelected: (i) {
               if (showPublish && i == 2) {
-                context.push('/create-listing');
+                showCreateListingModal(context);
                 return;
               }
               ref.read(shellTabIndexProvider.notifier).setIndex(i);

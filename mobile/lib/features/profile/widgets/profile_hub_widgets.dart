@@ -242,14 +242,21 @@ class ProfileLinkTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
+    this.subtitle,
+    this.leadingColor,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
+  final String? subtitle;
+  final Color? leadingColor;
+  final Widget? trailing;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = leadingColor ?? AppColors.primaryBlue;
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
@@ -264,17 +271,44 @@ class ProfileLinkTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, color: AppColors.primaryBlue, size: 22),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
+              if (trailing != null) ...[
+                trailing!,
+                const SizedBox(width: 8),
+              ],
               Icon(Icons.chevron_right, color: Colors.grey.shade400),
             ],
           ),

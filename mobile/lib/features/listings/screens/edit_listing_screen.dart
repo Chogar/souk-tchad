@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -7,8 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import '../../../core/constants/category_constants.dart';
-import '../../../core/models/category_model.dart';
+import '../../../core/layout/responsive_center.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/utils/api_error.dart';
@@ -33,20 +30,17 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _cityController = TextEditingController();
-  final _customCategoryController = TextEditingController();
 
-  List<CategoryModel> _categories = [];
-  String? _selectedCategoryId;
   final List<String> _existingImageUrls = [];
-  final List<String> _newImagePaths = [];
+  final List<XFile> _newImages = [];
   String? _existingVideoPath;
-  String? _newVideoPath;
+  XFile? _newVideoFile;
   bool _removeVideo = false;
   bool _isLoading = false;
   bool _initialized = false;
   String _listingTitle = '';
 
-  int get _totalImages => _existingImageUrls.length + _newImagePaths.length;
+  int get _totalImages => _existingImageUrls.length + _newImages.length;
 
   @override
   void dispose() {
@@ -54,26 +48,17 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     _descriptionController.dispose();
     _priceController.dispose();
     _cityController.dispose();
-    _customCategoryController.dispose();
     super.dispose();
-  }
-
-  bool get _isOtherCategory {
-    if (_selectedCategoryId == null) return false;
-    final match = _categories.where((c) => c.id == _selectedCategoryId);
-    return match.isNotEmpty && match.first.slug == kOtherCategorySlug;
   }
 
   Future<void> _loadData() async {
     final service = ref.read(listingsServiceProvider);
     final api = ref.read(apiServiceProvider);
     final listing = await service.getListing(widget.listingId);
-    final categories = await service.getCategories();
     final strings = ref.read(stringsProvider);
     if (!mounted) return;
 
     setState(() {
-      _categories = categories;
       _listingTitle = listing.title;
       _titleController.text = listing.title;
       _descriptionController.text = listing.description;
@@ -82,14 +67,12 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         strings.locale,
       ).round().toString();
       _cityController.text = listing.city;
-      _selectedCategoryId = listing.category.id;
-      _customCategoryController.text = listing.customCategoryName ?? '';
       _existingImageUrls
         ..clear()
         ..addAll(listing.images.map(api.mediaUrl));
       _existingVideoPath =
           listing.videos.isNotEmpty ? listing.videos.first : null;
-      _newVideoPath = null;
+      _newVideoFile = null;
       _removeVideo = false;
       _initialized = true;
     });
@@ -109,9 +92,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         imageQuality: 70,
       );
       if (file == null || _totalImages >= 5) return;
-      final compressed = await _compressImage(file.path, _newImagePaths.length);
+      final compressed = await _prepareImage(file, _newImages.length);
       if (compressed != null) {
-        setState(() => _newImagePaths.add(compressed));
+        setState(() => _newImages.add(compressed));
       }
       return;
     }
@@ -119,19 +102,18 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     final files = await picker.pickMultiImage(imageQuality: 70);
     if (files.isEmpty) return;
 
-    final compressedPaths = <String>[];
-    var index = _newImagePaths.length;
+    final prepared = <XFile>[];
+    var index = _newImages.length;
     for (final file in files.take(5 - _totalImages)) {
-      final compressed = await _compressImage(file.path, index);
-      if (compressed != null) compressedPaths.add(compressed);
+      final compressed = await _prepareImage(file, index);
+      if (compressed != null) prepared.add(compressed);
       index++;
     }
 
-    setState(() => _newImagePaths.addAll(compressedPaths));
+    setState(() => _newImages.addAll(prepared));
   }
 
   Future<void> _pickVideo() async {
-    if (kIsWeb) return;
     final strings = ref.read(stringsProvider);
     final source = await showVideoSourceSheet(context, strings);
     if (source == null || !mounted) return;
@@ -142,35 +124,39 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     );
     if (file == null) return;
     setState(() {
-      _newVideoPath = file.path;
+      _newVideoFile = file;
       _removeVideo = false;
     });
   }
 
   bool get _hasVideo =>
-      !_removeVideo && (_newVideoPath != null || _existingVideoPath != null);
+      !_removeVideo && (_newVideoFile != null || _existingVideoPath != null);
 
-  Future<String?> _compressImage(String path, int index) async {
-    if (kIsWeb) return path;
+  Future<XFile?> _prepareImage(XFile file, int index) async {
+    if (kIsWeb) return file;
 
-    final dir = await getTemporaryDirectory();
-    final targetPath =
-        '${dir.path}/compressed_${DateTime.now().microsecondsSinceEpoch}_$index.jpg';
+    try {
+      final dir = await getTemporaryDirectory();
+      final targetPath =
+          '${dir.path}/compressed_${DateTime.now().microsecondsSinceEpoch}_$index.jpg';
 
-    final result = await FlutterImageCompress.compressAndGetFile(
-      path,
-      targetPath,
-      quality: 75,
-      minWidth: 800,
-      minHeight: 800,
-    );
+      final result = await FlutterImageCompress.compressAndGetFile(
+        file.path,
+        targetPath,
+        quality: 75,
+        minWidth: 800,
+        minHeight: 800,
+      );
 
-    return result?.path;
+      return result != null ? XFile(result.path) : file;
+    } catch (_) {
+      return file;
+    }
   }
 
   Future<void> _submit() async {
     final strings = ref.read(stringsProvider);
-    if (!_formKey.currentState!.validate() || _selectedCategoryId == null) {
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
@@ -188,6 +174,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
           })
           .toList();
 
+      // La catégorie n'est plus modifiable : on ne l'envoie pas (conservée côté serveur).
       var listing = await service.updateListing(
         widget.listingId,
         title: _titleController.text.trim(),
@@ -196,16 +183,12 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
           double.parse(_priceController.text),
           strings.locale,
         ),
-        categoryId: _selectedCategoryId!,
         city: _cityController.text.trim(),
-        customCategoryName: _isOtherCategory
-            ? _customCategoryController.text.trim()
-            : '',
         images: keptServerPaths,
       );
 
-      if (_newImagePaths.isNotEmpty && !kIsWeb) {
-        listing = await service.uploadImages(widget.listingId, _newImagePaths);
+      if (_newImages.isNotEmpty) {
+        listing = await service.uploadImages(widget.listingId, _newImages);
       }
 
       if (_removeVideo) {
@@ -215,8 +198,8 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         );
       }
 
-      if (_newVideoPath != null && !kIsWeb) {
-        listing = await service.uploadVideo(widget.listingId, _newVideoPath!);
+      if (_newVideoFile != null) {
+        listing = await service.uploadVideo(widget.listingId, _newVideoFile!);
       }
 
       ref.invalidate(myListingsProvider);
@@ -262,83 +245,45 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  decoration: InputDecoration(labelText: strings.title),
-                  validator: (v) =>
-                      v != null && v.isNotEmpty ? null : strings.titleRequired,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descriptionController,
-                  maxLines: 4,
-                  decoration:
-                      InputDecoration(labelText: strings.description),
-                  validator: (v) => v != null && v.isNotEmpty
-                      ? null
-                      : strings.descriptionRequired,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _priceController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: strings.priceLabel),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return strings.priceRequired;
-                    if (double.tryParse(v) == null) return strings.invalidPrice;
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _cityController,
-                  decoration: InputDecoration(labelText: strings.city),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCategoryId,
-                  decoration: InputDecoration(labelText: strings.category),
-                  items: _categories
-                      .map(
-                        (c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(
-                            '${c.icon} ${strings.categoryLabel(c.slug)}',
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() {
-                    _selectedCategoryId = v;
-                    if (!_isOtherCategory) {
-                      _customCategoryController.clear();
-                    }
-                  }),
-                ),
-                if (_isOtherCategory) ...[
+          child: ResponsiveCenter(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _titleController,
+                    decoration: InputDecoration(labelText: strings.title),
+                    validator: (v) =>
+                        v != null && v.isNotEmpty ? null : strings.titleRequired,
+                  ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: _customCategoryController,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: InputDecoration(
-                      labelText: strings.customCategory,
-                      hintText: strings.customCategoryHint,
-                      prefixIcon: const Icon(Icons.category_outlined),
-                    ),
+                    controller: _descriptionController,
+                    maxLines: 4,
+                    decoration:
+                        InputDecoration(labelText: strings.description),
+                    validator: (v) => v != null && v.isNotEmpty
+                        ? null
+                        : strings.descriptionRequired,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(labelText: strings.priceLabel),
                     validator: (v) {
-                      if (!_isOtherCategory) return null;
-                      if (v != null && v.trim().length >= 2) return null;
-                      return strings.customCategoryRequired;
+                      if (v == null || v.isEmpty) return strings.priceRequired;
+                      if (double.tryParse(v) == null) return strings.invalidPrice;
+                      return null;
                     },
                   ),
-                ],
-                const SizedBox(height: 16),
-                if (!kIsWeb) ...[
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _cityController,
+                    decoration: InputDecoration(labelText: strings.city),
+                  ),
+                  const SizedBox(height: 16),
                   OutlinedButton.icon(
                     onPressed: _totalImages >= 5 ? null : _pickImages,
                     icon: const Icon(Icons.photo_library),
@@ -371,12 +316,10 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                                           child: const Icon(Icons.broken_image),
                                         ),
                                       )
-                                    : Image.file(
-                                        File(_newImagePaths[
-                                            index - _existingImageUrls.length]),
-                                        width: 80,
-                                        height: 80,
-                                        fit: BoxFit.cover,
+                                    : PickedImageThumb(
+                                        bytesFuture: _newImages[
+                                                index - _existingImageUrls.length]
+                                            .readAsBytes(),
                                       ),
                               ),
                               Positioned(
@@ -388,7 +331,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                                     if (isExisting) {
                                       _existingImageUrls.removeAt(index);
                                     } else {
-                                      _newImagePaths.removeAt(
+                                      _newImages.removeAt(
                                         index - _existingImageUrls.length,
                                       );
                                     }
@@ -406,7 +349,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                       if (_hasVideo) {
                         setState(() {
                           _removeVideo = true;
-                          _newVideoPath = null;
+                          _newVideoFile = null;
                           _existingVideoPath = null;
                         });
                       } else {
@@ -435,7 +378,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                               style: const TextStyle(fontSize: 13),
                             ),
                           ),
-                          if (_newVideoPath == null &&
+                          if (_newVideoFile == null &&
                               _existingVideoPath != null)
                             TextButton(
                               onPressed: _pickVideo,
@@ -444,42 +387,42 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                         ],
                       ),
                     ),
-                ],
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(strings.save),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _isLoading
-                      ? null
-                      : () => deleteListingWithConfirmation(
-                            context: context,
-                            ref: ref,
-                            listingId: widget.listingId,
-                            listingTitle: _listingTitle.isNotEmpty
-                                ? _listingTitle
-                                : _titleController.text,
-                            onSuccess: () {
-                              if (context.mounted) context.pop();
-                            },
-                          ),
-                  icon: const Icon(Icons.delete_outline),
-                  label: Text(strings.deleteListing),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(strings.save),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _isLoading
+                        ? null
+                        : () => deleteListingWithConfirmation(
+                              context: context,
+                              ref: ref,
+                              listingId: widget.listingId,
+                              listingTitle: _listingTitle.isNotEmpty
+                                  ? _listingTitle
+                                  : _titleController.text,
+                              onSuccess: () {
+                                if (context.mounted) context.pop();
+                              },
+                            ),
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(strings.deleteListing),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -18,6 +19,9 @@ export enum ListingStatus {
 }
 
 @Entity('listings')
+@Index('IDX_listings_status_created', ['status', 'createdAt'])
+@Index('IDX_listings_category_status', ['categoryId', 'status'])
+@Index('IDX_listings_user_status', ['userId', 'status'])
 export class Listing {
   @PrimaryGeneratedColumn('uuid')
   id: string;

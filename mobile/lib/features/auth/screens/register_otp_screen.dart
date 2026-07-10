@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -124,7 +125,7 @@ class _RegisterOtpScreenState extends ConsumerState<RegisterOtpScreen> {
                   fontSize: 16,
                 ),
               ),
-              if (draft.devCode != null) ...[
+              if (kDebugMode && draft.devCode != null) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),

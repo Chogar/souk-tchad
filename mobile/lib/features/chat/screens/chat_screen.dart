@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
@@ -160,11 +160,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (!_isRecording) return;
     final path = await _audioRecorder.stop();
     setState(() => _isRecording = false);
-    if (path == null || !File(path).existsSync()) return;
+    if (path == null || path.isEmpty) return;
 
     try {
+      final bytes = await XFile(path).readAsBytes();
       final chat = ref.read(chatServiceProvider);
-      final msg = await chat.sendVoiceMessage(widget.conversationId, path);
+      final msg = await chat.sendVoiceMessage(
+        widget.conversationId,
+        bytes,
+        filename: p.basename(path),
+      );
       if (mounted) {
         _appendMessage(msg);
         ref.invalidate(conversationsProvider);
@@ -182,22 +187,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Future<String?> _compressImage(String path) async {
-    if (kIsWeb) return path;
+  Future<Uint8List> _prepareImageBytes(XFile file) async {
+    if (kIsWeb) return file.readAsBytes();
 
     final dir = await getTemporaryDirectory();
     final targetPath =
         '${dir.path}/chat_${DateTime.now().microsecondsSinceEpoch}.jpg';
 
     final result = await FlutterImageCompress.compressAndGetFile(
-      path,
+      file.path,
       targetPath,
       quality: 75,
       minWidth: 1200,
       minHeight: 1200,
     );
 
-    return result?.path;
+    if (result != null) {
+      return XFile(result.path).readAsBytes();
+    }
+    return file.readAsBytes();
   }
 
   Future<void> _pickImage() async {
@@ -211,12 +219,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     setState(() => _uploading = true);
     try {
-      final path = await _compressImage(file.path) ?? file.path;
+      final bytes = await _prepareImageBytes(file);
       final chat = ref.read(chatServiceProvider);
       final msg = await chat.sendImageMessage(
         widget.conversationId,
-        path,
-        filename: p.basename(path),
+        bytes,
+        filename: file.name.isNotEmpty ? file.name : 'image.jpg',
       );
       if (mounted) {
         _appendMessage(msg);
@@ -243,19 +251,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'],
+      withData: true,
     );
     if (result == null || result.files.isEmpty) return;
 
     final file = result.files.first;
-    final path = file.path;
-    if (path == null) return;
+    Uint8List? bytes = file.bytes;
+    if (bytes == null && file.path != null) {
+      bytes = await XFile(file.path!).readAsBytes();
+    }
+    if (bytes == null) return;
 
     setState(() => _uploading = true);
     try {
       final chat = ref.read(chatServiceProvider);
       final msg = await chat.sendDocumentMessage(
         widget.conversationId,
-        path,
+        bytes,
         filename: file.name,
       );
       if (mounted) {

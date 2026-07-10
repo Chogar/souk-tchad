@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../l10n/app_strings.dart';
 import '../providers/app_providers.dart';
 import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
+import '../../features/auth/screens/login_screen.dart';
 
 class AuthRequiredView extends ConsumerWidget {
   const AuthRequiredView({
@@ -19,11 +19,6 @@ class AuthRequiredView extends ConsumerWidget {
   final String title;
   final String message;
   final String? redirectPath;
-
-  String _loginPath() {
-    if (redirectPath == null) return '/login';
-    return '/login?redirect=${Uri.encodeComponent(redirectPath!)}';
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,7 +49,10 @@ class AuthRequiredView extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () => context.go(_loginPath()),
+                onPressed: () => showLoginModal(
+                  context,
+                  redirectPath: redirectPath,
+                ),
                 icon: const Icon(Icons.login),
                 label: Text(strings.login),
               ),
@@ -63,7 +61,7 @@ class AuthRequiredView extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.go('/register'),
+                onPressed: () => context.push('/register'),
                 icon: const Icon(Icons.person_add_outlined),
                 label: Text(strings.createAccount),
               ),

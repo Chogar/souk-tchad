@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -193,7 +194,7 @@ export class AuthService {
 
     await this.registrationOtpRepository.delete({ email });
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = String(randomInt(100000, 1000000));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await this.registrationOtpRepository.save(

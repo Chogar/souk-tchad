@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/category_model.dart';
 import '../models/listing_model.dart';
 import 'api_service.dart';
@@ -68,31 +69,35 @@ class ListingsService {
     return ListingModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<ListingModel> uploadVideo(String listingId, String filePath) async {
+  Future<ListingModel> uploadVideo(String listingId, XFile file) async {
+    final bytes = await file.readAsBytes();
+    final name = file.name.isNotEmpty ? file.name : 'video.mp4';
     final formData = FormData.fromMap({
-      'video': await MultipartFile.fromFile(
-        filePath,
-        filename: 'video.mp4',
-      ),
+      'video': MultipartFile.fromBytes(bytes, filename: name),
     });
 
     final response = await _api.client.post(
       '/listings/$listingId/video',
       data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+        sendTimeout: const Duration(seconds: 120),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
     );
     return ListingModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<ListingModel> uploadImages(String listingId, List<String> filePaths) async {
+  Future<ListingModel> uploadImages(String listingId, List<XFile> files) async {
     final formData = FormData();
-    for (var i = 0; i < filePaths.length; i++) {
+    for (var i = 0; i < files.length; i++) {
+      final file = files[i];
+      final bytes = await file.readAsBytes();
+      final name = file.name.isNotEmpty ? file.name : 'image_$i.jpg';
       formData.files.add(
         MapEntry(
           'images',
-          await MultipartFile.fromFile(
-            filePaths[i],
-            filename: 'image_$i.jpg',
-          ),
+          MultipartFile.fromBytes(bytes, filename: name),
         ),
       );
     }
@@ -100,6 +105,11 @@ class ListingsService {
     final response = await _api.client.post(
       '/listings/$listingId/images',
       data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+        sendTimeout: const Duration(seconds: 90),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
     );
     return ListingModel.fromJson(response.data as Map<String, dynamic>);
   }

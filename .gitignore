@@ -9,13 +9,31 @@ backend/dist/
 .env
 .env.local
 *.env
+!*.env.example
+!**/.env.example
+!**/.env.production.example
 mobile/dart_defines.json
+
+# Firebase / Google (ne jamais committer les fichiers réels)
+**/google-services.json
+**/GoogleService-Info.plist
+!**/*.example
+**/credentials*.json
+**/service-account*.json
+
+# Android signing
+mobile/android/key.properties
+**/*.jks
+**/*.keystore
 
 # Archives
 *.zip
 
 # Uploads
 backend/uploads/
+
+# Pages légales versionnées (OK)
+!backend/public/
 
 # IDE
 .idea/

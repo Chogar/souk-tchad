@@ -202,7 +202,17 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    await _googleSignIn.signOut();
     await _api.clearToken();
+    await logoutGoogleOnly();
+  }
+
+  /// Sign-out Google sans toucher au jeton API (déjà effacé).
+  Future<void> logoutGoogleOnly() async {
+    try {
+      await _googleSignIn.signOut().timeout(const Duration(seconds: 2));
+    } catch (_) {}
+    try {
+      await _googleSignIn.disconnect().timeout(const Duration(seconds: 2));
+    } catch (_) {}
   }
 }

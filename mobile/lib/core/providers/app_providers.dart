@@ -17,6 +17,7 @@ import '../services/notifications_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/credentials_service.dart';
 import '../services/subscriptions_service.dart';
+import '../services/admin_service.dart';
 import '../services/user_cache_service.dart';
 import '../services/users_service.dart';
 import '../../features/chat/screens/conversations_screen.dart';
@@ -27,8 +28,18 @@ import '../../features/subscriptions/providers/plans_provider.dart';
 import 'server_config_provider.dart';
 
 final apiServiceProvider = Provider<ApiService>((ref) {
-  final baseUrl = ref.watch(apiBaseUrlProvider).value ?? ApiConstants.baseUrl;
-  return ApiService(baseUrl: baseUrl);
+  // Une seule instance : ne pas recréer à chaque tick de apiBaseUrlProvider
+  // (sinon le jeton est réhydraté depuis le disque et annule le logout).
+  final initial =
+      ref.read(apiBaseUrlProvider).value ?? ApiConstants.baseUrl;
+  final api = ApiService(baseUrl: initial);
+  ref.listen<AsyncValue<String>>(apiBaseUrlProvider, (previous, next) {
+    final url = next.value;
+    if (url != null && url.isNotEmpty) {
+      api.updateBaseUrl(url);
+    }
+  });
+  return api;
 });
 
 final credentialsServiceProvider =
@@ -61,6 +72,10 @@ final aiServiceProvider = Provider<AiService>(
 
 final subscriptionsServiceProvider = Provider<SubscriptionsService>(
   (ref) => SubscriptionsService(ref.watch(apiServiceProvider)),
+);
+
+final adminServiceProvider = Provider<AdminService>(
+  (ref) => AdminService(ref.watch(apiServiceProvider)),
 );
 
 final usersServiceProvider = Provider<UsersService>(
@@ -116,6 +131,8 @@ class ShellTabNotifier extends Notifier<int> {
 class AuthNotifier extends AsyncNotifier<UserModel?> {
   UserCacheService get _userCache => ref.read(userCacheServiceProvider);
   DateTime? _skipRemoteRefreshUntil;
+  /// Incrémenté à chaque logout pour annuler les refresh en cours.
+  int _sessionEpoch = 0;
 
   Future<void> _persistUser(UserModel user) => _userCache.save(user);
 
@@ -128,8 +145,11 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
   }
 
   Future<void> _clearStoredSession() async {
-    await ref.read(authServiceProvider).logout();
+    await ref.read(apiServiceProvider).clearToken();
     await _userCache.clear();
+    try {
+      await ref.read(authServiceProvider).logoutGoogleOnly();
+    } catch (_) {}
   }
 
   Future<UserModel?> _restoreSession() async {
@@ -140,16 +160,23 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
     }
 
     final cached = await _userCache.load();
+    // Afficher tout de suite le cache, puis rafraîchir en arrière-plan.
+    if (cached != null) {
+      unawaited(_refreshSessionInBackground());
+      return cached;
+    }
 
     try {
-      await ref.read(apiBaseUrlProvider.future);
-      final user = await ref.read(authServiceProvider).getCurrentUser();
+      await ref
+          .read(apiBaseUrlProvider.future)
+          .timeout(const Duration(seconds: 2));
+      final user = await ref
+          .read(authServiceProvider)
+          .getCurrentUser()
+          .timeout(const Duration(seconds: 3));
       if (user == null) {
         await _clearStoredSession();
         return null;
-      }
-      if (cached != null && _isSameProfile(cached, user)) {
-        return cached;
       }
       await _persistUser(user);
       return user;
@@ -158,30 +185,49 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
         await _clearStoredSession();
         return null;
       }
-      return cached;
+      return null;
     } catch (_) {
-      return cached;
+      return null;
     }
   }
 
-  bool _isSameProfile(UserModel a, UserModel b) =>
-      a.id == b.id &&
-      a.name == b.name &&
-      a.phone == b.phone &&
-      a.avatarUrl == b.avatarUrl &&
-      a.plan == b.plan &&
-      a.isEmailVerified == b.isEmailVerified;
+  Future<void> _refreshSessionInBackground() async {
+    final epoch = _sessionEpoch;
+    try {
+      await ref.read(apiBaseUrlProvider.future);
+      final token = await ref.read(apiServiceProvider).getToken();
+      if (token == null || epoch != _sessionEpoch) return;
+
+      final user = await ref.read(authServiceProvider).getCurrentUser();
+      if (epoch != _sessionEpoch) return;
+      if (user == null) {
+        await _clearStoredSession();
+        if (epoch == _sessionEpoch) state = const AsyncData(null);
+        return;
+      }
+      await _persistUser(user);
+      if (epoch == _sessionEpoch && state.value?.id == user.id) {
+        state = AsyncData(user);
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 && epoch == _sessionEpoch) {
+        await _clearStoredSession();
+        state = const AsyncData(null);
+      }
+    } catch (_) {}
+  }
 
   @override
   Future<UserModel?> build() async {
-    final auth = ref.read(authServiceProvider);
-    try {
-      await auth
-          .initGoogle()
-          .timeout(const Duration(seconds: 3), onTimeout: () {});
-    } catch (_) {
-      // Google Sign-In optionnel en développement local.
-    }
+    // Google Sign-In : ne jamais bloquer le démarrage.
+    unawaited(() async {
+      try {
+        await ref
+            .read(authServiceProvider)
+            .initGoogle()
+            .timeout(const Duration(seconds: 2), onTimeout: () {});
+      } catch (_) {}
+    }());
 
     return _restoreSession();
   }
@@ -281,42 +327,80 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
   Future<void> refreshUser({bool force = false}) async {
     if (!force && _shouldSkipRemoteRefresh) return;
 
-    final previous = state.value ?? await _userCache.load();
-    if (previous != null && state.value == null) {
-      state = AsyncData(previous);
+    final epoch = _sessionEpoch;
+    final token = await ref.read(apiServiceProvider).getToken();
+    if (token == null) {
+      if (epoch == _sessionEpoch) state = const AsyncData(null);
+      return;
     }
+
+    final previous = state.value;
 
     try {
       await ref.read(apiBaseUrlProvider.future);
+      if (epoch != _sessionEpoch) return;
+
       final user = await ref.read(authServiceProvider).getCurrentUser();
+      if (epoch != _sessionEpoch) return;
+
       if (user == null) {
         await _clearStoredSession();
-        state = const AsyncData(null);
+        if (epoch == _sessionEpoch) state = const AsyncData(null);
         return;
       }
       await _persistUser(user);
-      state = AsyncData(user);
+      if (epoch == _sessionEpoch) state = AsyncData(user);
     } on DioException catch (e) {
+      if (epoch != _sessionEpoch) return;
       if (e.response?.statusCode == 401) {
         await _clearStoredSession();
         state = const AsyncData(null);
         return;
       }
-      if (previous != null) {
+      // Ne jamais réinjecter un user si on est déjà déconnecté.
+      if (previous != null && state.value != null) {
         state = AsyncData(previous);
       }
     } catch (_) {
-      if (previous != null) {
+      if (epoch != _sessionEpoch) return;
+      if (previous != null && state.value != null) {
         state = AsyncData(previous);
       }
     }
   }
 
   Future<void> logout() async {
-    await _clearStoredSession();
-    ref.read(chatServiceProvider).disconnect();
-    await _resetUserScopedState();
+    _sessionEpoch++;
+    _skipRemoteRefreshUntil = null;
+
+    final api = ref.read(apiServiceProvider);
+    // Immédiat : couper l'UI sans attendre le disque (sinon le bouton paraît mort).
+    api.invalidateSession();
     state = const AsyncData(null);
+    ref.read(shellTabIndexProvider.notifier).setIndex(0);
+
+    try {
+      ref.read(chatServiceProvider).disconnect();
+    } catch (_) {}
+
+    // Disque / Google en arrière-plan (_blockDiskHydration empêche toute restauration).
+    unawaited(() async {
+      try {
+        await api.clearToken();
+      } catch (_) {}
+      try {
+        await _userCache.clear();
+      } catch (_) {}
+      try {
+        await ref.read(authServiceProvider).logoutGoogleOnly();
+      } catch (_) {}
+      try {
+        await ref.read(cacheServiceProvider).clearUserData();
+      } catch (_) {}
+      ref.invalidate(myListingsProvider);
+      ref.invalidate(conversationsProvider);
+      ref.invalidate(plansProvider);
+    }());
   }
 
   Future<void> deleteAccount() async {

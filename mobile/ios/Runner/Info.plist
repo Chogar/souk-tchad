@@ -54,6 +54,8 @@
 	<string>Souk Tchad utilise le micro pour les vidéos d'annonces et les messages vocaux.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Souk Tchad accède à vos photos et vidéos pour publier et rechercher des annonces.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Souk Tchad utilise la reconnaissance vocale pour dicter le titre et la description de vos annonces.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

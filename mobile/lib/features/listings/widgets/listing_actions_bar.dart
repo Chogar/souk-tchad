@@ -8,6 +8,7 @@ import '../../../core/l10n/app_strings.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/api_error.dart';
+import '../../auth/screens/login_screen.dart';
 import '../../chat/screens/conversations_screen.dart';
 
 class ListingActionsBar extends ConsumerWidget {
@@ -30,7 +31,7 @@ class ListingActionsBar extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(strings.loginRequired)),
     );
-    context.go('/login');
+    showLoginModal(context);
   }
 
   Future<void> _toggleFavorite(

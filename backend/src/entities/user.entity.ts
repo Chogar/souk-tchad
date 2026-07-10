@@ -15,6 +15,11 @@ export enum UserPlan {
   PROFESSIONAL = 'PROFESSIONAL',
 }
 
+export enum UserRole {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -45,6 +50,9 @@ export class User {
 
   @Column({ type: 'enum', enum: UserPlan, default: UserPlan.FREE })
   plan: UserPlan;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  role: UserRole;
 
   @Column({ name: 'is_email_verified', default: false })
   isEmailVerified: boolean;

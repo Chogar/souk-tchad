@@ -18,7 +18,7 @@ export default () => ({
   upload: {
     dir: process.env.UPLOAD_DIR ?? 'uploads',
     maxListingsFreePlan: parseInt(
-      process.env.MAX_LISTINGS_FREE_PLAN ?? '3',
+      process.env.MAX_LISTINGS_FREE_PLAN ?? '5',
       10,
     ),
   },
@@ -32,6 +32,9 @@ export default () => ({
   app: {
     url: process.env.APP_URL ?? 'http://localhost:3000',
   },
+  cors: {
+    origins: process.env.CORS_ORIGINS ?? '',
+  },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY ?? '',
     model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
@@ -42,5 +45,14 @@ export default () => ({
     projectId: process.env.FIREBASE_PROJECT_ID ?? '',
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL ?? '',
     privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') ?? '',
+  },
+  payments: {
+    /** disabled | manual */
+    mode: process.env.PAYMENT_MODE ?? 'manual',
+    webhookSecret: process.env.PAYMENT_WEBHOOK_SECRET ?? '',
+    momoNumber: process.env.PAYMENT_MOMO_NUMBER ?? '+23566000000',
+    momoLabel: process.env.PAYMENT_MOMO_LABEL ?? 'Souk Tchad',
+    /** E-mail admin par défaut (alertes paiement). */
+    adminEmail: process.env.PAYMENT_ADMIN_EMAIL ?? '',
   },
 });

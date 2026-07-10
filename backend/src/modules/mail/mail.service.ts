@@ -63,6 +63,42 @@ export class MailService {
     await this.send(email, 'Souk Tchad — Code de validation', html);
   }
 
+  async sendPaymentRequestNotification(data: {
+    to: string;
+    orderId: string;
+    plan: string;
+    amount: number;
+    currency: string;
+    providerLabel: string;
+    payerPhone: string;
+    userName: string;
+    userEmail: string;
+    proofImageUrl: string | null;
+    appUrl: string;
+  }): Promise<void> {
+    const adminUrl = data.appUrl
+      ? `${data.appUrl.replace(/\/$/, '')}/admin`
+      : '';
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
+        <h2 style="color:#003080">Souk Tchad — Nouveau paiement</h2>
+        <p>Un client a soumis une demande d'abonnement payant.</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+          <tr><td style="padding:6px 0;color:#666">Client</td><td><strong>${data.userName}</strong> (${data.userEmail})</td></tr>
+          <tr><td style="padding:6px 0;color:#666">Plan</td><td><strong>${data.plan}</strong></td></tr>
+          <tr><td style="padding:6px 0;color:#666">Montant</td><td><strong>${data.amount} ${data.currency}</strong></td></tr>
+          <tr><td style="padding:6px 0;color:#666">Opérateur</td><td>${data.providerLabel}</td></tr>
+          <tr><td style="padding:6px 0;color:#666">N° payeur</td><td>${data.payerPhone}</td></tr>
+          <tr><td style="padding:6px 0;color:#666">Référence</td><td style="font-family:monospace;font-size:12px">${data.orderId}</td></tr>
+        </table>
+        ${data.proofImageUrl ? `<p style="color:#666;font-size:13px">Capture d'écran jointe sur le serveur : ${data.proofImageUrl}</p>` : ''}
+        ${adminUrl ? `<p style="margin:24px 0"><a href="${adminUrl}" style="background:#003080;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block">Ouvrir l'administration</a></p>` : ''}
+        <p style="color:#999;font-size:12px">Confirmez ou refusez le paiement depuis l'application admin.</p>
+      </div>
+    `;
+    await this.send(data.to, 'Souk Tchad — Nouveau paiement abonnement', html);
+  }
+
   private async send(to: string, subject: string, html: string): Promise<void> {
     if (!this.transporter) {
       this.logger.warn(

@@ -11,19 +11,12 @@ import 'core/router/app_router.dart';
 import 'core/services/cache_service.dart';
 import 'core/services/listings_bootstrap.dart';
 import 'core/theme/app_theme.dart';
-import 'core/widgets/dismiss_keyboard.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   final cache = CacheService();
-  if (kIsWeb) {
-    await ListingsBootstrap.warm(cache);
-  } else {
-    await Future.wait([
-      cache.database,
-      ListingsBootstrap.warm(cache),
-    ]);
-  }
+  // Ne pas bloquer le 1er frame : warm cache en arrière-plan.
+  unawaited(ListingsBootstrap.warm(cache));
   runApp(const ProviderScope(child: SoukTchadApp()));
   _initAdsInBackground();
 }
@@ -70,7 +63,7 @@ class SoukTchadApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) => DismissKeyboard(child: child ?? const SizedBox()),
+      builder: (context, child) => child ?? const SizedBox(),
       routerConfig: router,
     );
   }

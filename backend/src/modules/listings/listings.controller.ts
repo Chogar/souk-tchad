@@ -32,8 +32,16 @@ export class ListingsController {
     @Query('categoryId') categoryId?: string,
     @Query('search') search?: string,
     @Query('city') city?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.listingsService.findAll({ categoryId, search, city });
+    return this.listingsService.findAll({
+      categoryId,
+      search,
+      city,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
   }
 
   @Get('mine')

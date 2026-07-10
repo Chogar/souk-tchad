@@ -5,6 +5,7 @@ import '../../../core/utils/currency_format.dart';
 import '../../../core/models/listing_model.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
+import 'listing_photo.dart';
 
 class MyListingTile extends StatelessWidget {
   const MyListingTile({
@@ -42,13 +43,10 @@ class MyListingTile extends StatelessWidget {
                 child: SizedBox(
                   width: 88,
                   height: 88,
-                  child: imageUrl != null
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _placeholder(),
-                        )
-                      : _placeholder(),
+                  child: ListingPhoto(
+                    url: imageUrl,
+                    error: _placeholder(),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

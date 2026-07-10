@@ -128,24 +128,50 @@ Future<List<ListingModel>> _fetchFromNetwork(
   return _applyLocalFilters(_dedupeListings(listings), filter);
 }
 
+String _catalogFingerprint(List<ListingModel>? listings) {
+  if (listings == null || listings.isEmpty) return '';
+  final parts = listings.map((l) => '${l.id}:${l.images.length}').toList()
+    ..sort();
+  return '${parts.length}:${parts.join('|')}';
+}
+
+/// Sync réseau : ne bump l'UI que si le catalogue a vraiment changé.
+Future<void> _syncCatalogQuietly({
+  required dynamic ref,
+  required ListingsService service,
+  required CacheService cache,
+  required ListingsFilter filter,
+}) async {
+  try {
+    final before = _catalogFingerprint(ListingsBootstrap.listings);
+    await _fetchFromNetwork(service, cache, filter);
+    final after = _catalogFingerprint(ListingsBootstrap.listings);
+    if (before != after) {
+      bumpCatalogVersion(ref);
+    }
+  } catch (_) {}
+}
+
 void _scheduleBackgroundSync(
+  dynamic ref,
   ListingsService service,
   CacheService cache,
   ListingsFilter filter,
 ) {
-  unawaited(() async {
-    try {
-      await _fetchFromNetwork(service, cache, filter);
-    } catch (_) {}
-  }());
+  unawaited(
+    _syncCatalogQuietly(
+      ref: ref,
+      service: service,
+      cache: cache,
+      filter: filter,
+    ),
+  );
 }
 
 final listingsProvider =
     FutureProvider.family<List<ListingModel>, ListingsFilter>((ref, filter) async {
   ref.keepAlive();
   ref.watch(catalogVersionProvider);
-  // Attendre l'URL serveur (évite les appels vers 127.0.0.1 sur iPhone).
-  await ref.watch(apiBaseUrlProvider.future);
 
   final service = ref.read(listingsServiceProvider);
   final cache = ref.read(cacheServiceProvider);
@@ -154,17 +180,31 @@ final listingsProvider =
   if (boot != null && boot.isNotEmpty) {
     final fromMemory = _applyLocalFilters(_dedupeListings(boot), filter);
     if (fromMemory.isNotEmpty) {
-      _scheduleBackgroundSync(service, cache, filter);
+      unawaited(
+        () async {
+          try {
+            await ref.read(apiBaseUrlProvider.future);
+            await _syncCatalogQuietly(
+              ref: ref,
+              service: service,
+              cache: cache,
+              filter: filter,
+            );
+          } catch (_) {}
+        }(),
+      );
       return fromMemory;
     }
   }
 
+  // Attendre l'URL serveur seulement si pas de cache mémoire.
+  await ref.watch(apiBaseUrlProvider.future);
+
   final cached = await _loadFromCache(cache, filter);
   if (cached.isNotEmpty) {
-    _scheduleBackgroundSync(service, cache, filter);
+    _scheduleBackgroundSync(ref, service, cache, filter);
     return cached;
   }
 
-  // Pas de cache : obligatoire d'attendre le réseau (affiche le loading).
   return _fetchFromNetwork(service, cache, filter);
 });

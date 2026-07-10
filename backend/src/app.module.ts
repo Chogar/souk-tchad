@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ServeStaticModule } from '@nestjs/serve-static';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { join } from 'path';
 import configuration from './config/configuration';
 import { Category } from './entities/category.entity';
 import { Conversation } from './entities/conversation.entity';
@@ -13,6 +13,8 @@ import { RegistrationOtp } from './entities/registration-otp.entity';
 import { Favorite } from './entities/favorite.entity';
 import { Listing } from './entities/listing.entity';
 import { Message } from './entities/message.entity';
+import { PaymentOrder } from './entities/payment-order.entity';
+import { PaymentSettings } from './entities/payment-settings.entity';
 import { User } from './entities/user.entity';
 import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -24,6 +26,7 @@ import { MailModule } from './modules/mail/mail.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { UsersModule } from './modules/users/users.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 const entities = [
   User,
@@ -35,11 +38,25 @@ const entities = [
   DeviceToken,
   EmailToken,
   RegistrationOtp,
+  PaymentOrder,
+  PaymentSettings,
 ];
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 120,
+      },
+      {
+        name: 'auth',
+        ttl: 60_000,
+        limit: 20,
+      },
+    ]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -54,10 +71,6 @@ const entities = [
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
       }),
     }),
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'uploads'),
-      serveRoot: '/uploads',
-    }),
     MailModule,
     AuthModule,
     UsersModule,
@@ -68,7 +81,14 @@ const entities = [
     NotificationsModule,
     AiModule,
     SubscriptionsModule,
+    AdminModule,
   ],
   controllers: [AppController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

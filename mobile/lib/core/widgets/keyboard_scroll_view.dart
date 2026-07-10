@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dismiss_keyboard.dart';
 
 /// Scroll view qui remonte le contenu quand le clavier s'ouvre.
 class KeyboardScrollView extends StatelessWidget {
@@ -16,12 +15,10 @@ class KeyboardScrollView extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return DismissKeyboard(
-      child: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: padding.copyWith(bottom: padding.bottom + bottomInset),
-        child: child,
-      ),
+    return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: padding.copyWith(bottom: padding.bottom + bottomInset),
+      child: child,
     );
   }
 }

@@ -76,34 +76,50 @@ export class ChatService {
       .orderBy('c.updatedAt', 'DESC')
       .getMany();
 
-    return Promise.all(
-      conversations.map(async (conversation) => {
-        const lastMessage = await this.messagesRepository.findOne({
-          where: { conversationId: conversation.id },
-          order: { createdAt: 'DESC' },
-          relations: { sender: true },
-        });
-        const unreadCount = await this.messagesRepository.count({
-          where: {
-            conversationId: conversation.id,
-            read: false,
-            senderId: Not(userId),
-          },
-        });
+    if (conversations.length === 0) return [];
 
-        return {
-          ...conversation,
-          lastMessage: lastMessage
-            ? {
-                content: lastMessage.content,
-                createdAt: lastMessage.createdAt,
-                senderId: lastMessage.senderId,
-              }
-            : null,
-          unreadCount,
-        };
-      }),
+    const ids = conversations.map((c) => c.id);
+
+    const lastMessages = await this.messagesRepository
+      .createQueryBuilder('m')
+      .distinctOn(['m.conversationId'])
+      .leftJoinAndSelect('m.sender', 'sender')
+      .where('m.conversationId IN (:...ids)', { ids })
+      .orderBy('m.conversationId')
+      .addOrderBy('m.createdAt', 'DESC')
+      .getMany();
+
+    const unreadRows = await this.messagesRepository
+      .createQueryBuilder('m')
+      .select('m.conversationId', 'conversationId')
+      .addSelect('COUNT(*)', 'count')
+      .where('m.conversationId IN (:...ids)', { ids })
+      .andWhere('m.read = false')
+      .andWhere('m.senderId != :userId', { userId })
+      .groupBy('m.conversationId')
+      .getRawMany<{ conversationId: string; count: string }>();
+
+    const lastByConv = new Map(
+      lastMessages.map((m) => [m.conversationId, m] as const),
     );
+    const unreadByConv = new Map(
+      unreadRows.map((r) => [r.conversationId, Number(r.count)] as const),
+    );
+
+    return conversations.map((conversation) => {
+      const lastMessage = lastByConv.get(conversation.id);
+      return {
+        ...conversation,
+        lastMessage: lastMessage
+          ? {
+              content: lastMessage.content,
+              createdAt: lastMessage.createdAt,
+              senderId: lastMessage.senderId,
+            }
+          : null,
+        unreadCount: unreadByConv.get(conversation.id) ?? 0,
+      };
+    });
   }
 
   async getUnreadTotal(userId: string): Promise<number> {
@@ -167,7 +183,7 @@ export class ChatService {
     });
   }
 
-  private async ensureParticipant(
+  async ensureParticipant(
     userId: string,
     conversationId: string,
   ): Promise<Conversation> {

@@ -31,6 +31,16 @@ class ListingsBootstrap {
     _listings = listings;
   }
 
+  /// Ajoute ou met à jour une annonce en tête du cache mémoire.
+  static void upsertListing(ListingModel listing) {
+    final current = List<ListingModel>.from(_listings ?? const []);
+    current.removeWhere((item) => item.id == listing.id);
+    if (listing.status == 'ACTIVE') {
+      current.insert(0, listing);
+    }
+    _listings = current;
+  }
+
   static void updateCategories(List<CategoryModel> categories) {
     _categories = categories;
   }

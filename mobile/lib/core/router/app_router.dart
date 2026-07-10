@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/admin/screens/admin_dashboard_screen.dart';
+import '../../features/admin/screens/admin_payment_settings_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_otp_screen.dart';
 import '../../features/auth/screens/register_profile_screen.dart';
@@ -20,7 +22,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh(ref);
 
   final router = GoRouter(
-    initialLocation: '/splash',
+    initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
@@ -35,14 +37,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       bool requiresAuth(String path) {
         if (path == '/create-listing' ||
             path == '/my-listings' ||
-            path == '/profile') {
+            path == '/profile' ||
+            path == '/admin' ||
+            path == '/admin/payment-settings') {
           return true;
         }
         return path.startsWith('/edit-listing/') || path.startsWith('/chat/');
       }
 
-      if (isSplash) return null;
-      if (isLoading) return '/splash';
+      // Splash optionnel : ne pas bloquer l'accueil pendant le chargement auth.
+      if (isSplash) {
+        if (!isLoading) return '/';
+        return null;
+      }
+      if (isLoading) return null;
 
       if (user == null && requiresAuth(location)) {
         final target = state.uri.toString();
@@ -113,6 +121,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/admin',
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/admin/payment-settings',
+        builder: (context, state) => const AdminPaymentSettingsScreen(),
       ),
       GoRoute(
         path: '/edit-listing/:id',

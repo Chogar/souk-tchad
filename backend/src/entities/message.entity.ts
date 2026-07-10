@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -10,6 +11,12 @@ import { Conversation } from './conversation.entity';
 import { User } from './user.entity';
 
 @Entity('messages')
+@Index('IDX_messages_conversation_created', ['conversationId', 'createdAt'])
+@Index('IDX_messages_conversation_read_sender', [
+  'conversationId',
+  'read',
+  'senderId',
+])
 export class Message {
   @PrimaryGeneratedColumn('uuid')
   id: string;

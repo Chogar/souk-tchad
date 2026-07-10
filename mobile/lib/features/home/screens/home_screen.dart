@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/layout/app_breakpoints.dart';
 import '../../../core/models/category_model.dart';
 import '../../../core/models/image_search_result.dart';
 import '../../../core/models/listing_model.dart';
@@ -34,7 +35,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Timer? _searchDebounce;
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
-  final _categoryScrollController = ScrollController();
 
   ListingsFilter get _filter =>
       ListingsFilter(categoryId: _selectedCategoryId, search: _searchQuery);
@@ -50,7 +50,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _searchDebounce?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
-    _categoryScrollController.dispose();
     super.dispose();
   }
 
@@ -62,12 +61,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _clearSearch() {
     _searchController.clear();
-    setState(() => _searchQuery = '');
-  }
-
-  void _selectCategory(String? categoryId) {
-    if (_selectedCategoryId == categoryId) return;
-    setState(() => _selectedCategoryId = categoryId);
+    setState(() {
+      _searchQuery = '';
+      _selectedCategoryId = null;
+    });
   }
 
   Future<void> _showManualSearchDialog({String? infoMessage}) async {
@@ -269,11 +266,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
     final strings = ref.watch(stringsProvider);
-    final categoriesAsync = ref.watch(categoriesProvider);
     final listingsAsync = ref.watch(listingsProvider(_filter));
     final api = ref.watch(apiServiceProvider);
+    final screen = MediaQuery.sizeOf(context);
+    final sideInset = AppBreakpoints.pageHorizontalInset(screen.width);
+    final gridSize = AppBreakpoints.contentSize(screen);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: Text(strings.appName),
         actions: [
@@ -293,7 +293,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: EdgeInsets.fromLTRB(sideInset, 16, sideInset, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -329,44 +329,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: categoriesAsync.when(
-                    data: (categories) => SizedBox(
-                      height: 52,
-                      child: ListView(
-                        controller: _categoryScrollController,
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        children: [
-                          _CategoryChip(
-                            label: strings.allCategories,
-                            icon: '🏪',
-                            selected: _selectedCategoryId == null,
-                            onTap: () => _selectCategory(null),
-                          ),
-                          ...categories.map(
-                            (cat) => _CategoryChip(
-                              label: strings.shortCategoryLabel(cat.slug),
-                              icon: cat.icon,
-                              selected: _selectedCategoryId == cat.id,
-                              onTap: () => _selectCategory(
-                                _selectedCategoryId == cat.id ? null : cat.id,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    loading: () => const SizedBox(
-                      height: 52,
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                    error: (e, _) => Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(strings.errorWith('$e')),
-                    ),
-                  ),
-                ),
                 const SliverToBoxAdapter(child: SizedBox(height: 8)),
                 listingsAsync.when(
                   data: (listings) {
@@ -383,8 +345,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(strings.noListingsFound),
-                              if (_searchQuery.isEmpty &&
-                                  _selectedCategoryId == null) ...[
+                              if (_searchQuery.isEmpty) ...[
                                 const SizedBox(height: 8),
                                 Text(
                                   strings.checkServerConnection,
@@ -402,15 +363,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   label: Text(strings.retryLoad),
                                 ),
                               ],
-                              if (_searchQuery.isNotEmpty ||
-                                  _selectedCategoryId != null) ...[
+                              if (_searchQuery.isNotEmpty) ...[
                                 const SizedBox(height: 12),
                                 TextButton(
-                                  onPressed: () {
-                                    _clearSearch();
-                                    _selectCategory(null);
-                                  },
-                                  child: Text(strings.allCategories),
+                                  onPressed: _clearSearch,
+                                  child: Text(strings.search),
                                 ),
                               ],
                             ],
@@ -420,14 +377,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     }
 
                     return SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 88),
+                      padding: EdgeInsets.fromLTRB(sideInset, 4, sideInset, 88),
                       sliver: SliverGrid(
                         gridDelegate:
                             SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: kIsWeb ? 6 : 3,
-                          mainAxisExtent: kIsWeb ? 165 : 178,
-                          crossAxisSpacing: kIsWeb ? 8 : 6,
-                          mainAxisSpacing: 8,
+                          crossAxisCount:
+                              AppBreakpoints.listingCrossAxisCount(gridSize),
+                          childAspectRatio:
+                              AppBreakpoints.listingChildAspectRatio(gridSize),
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 12,
                         ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => ListingCard(
@@ -649,60 +608,6 @@ class _SearchBar extends StatelessWidget {
               child: const Icon(Icons.search, size: 22),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final String icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Material(
-        color: selected ? AppColors.primaryBlue : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: selected ? AppColors.primaryBlue : Colors.grey.shade300,
-                width: selected ? 1.5 : 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(icon, style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: selected ? Colors.white : Colors.black87,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

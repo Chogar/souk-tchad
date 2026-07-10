@@ -11,7 +11,9 @@ import '../../../core/l10n/app_strings.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/utils/currency_format.dart';
+import '../../auth/screens/login_screen.dart';
 import '../../chat/screens/conversations_screen.dart';
+import 'listing_photo.dart';
 
 enum ListingCardLayout { grid, list }
 
@@ -66,10 +68,12 @@ class _GridListingCard extends ConsumerWidget {
     final isFav = ref.watch(favoriteIdsProvider).contains(listing.id);
 
     return Material(
-      color: Theme.of(context).cardColor,
-      elevation: 1.5,
-      shadowColor: Colors.black26,
-      borderRadius: BorderRadius.circular(10),
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push('/listing/${listing.id}'),
@@ -77,81 +81,110 @@ class _GridListingCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
+              flex: 13,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  imageUrl != null
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          cacheWidth: 360,
-                          errorBuilder: (_, __, ___) => _placeholder(compact: true),
-                        )
-                      : _placeholder(compact: true),
-                  Positioned(
-                    top: 4,
-                    left: 4,
-                    child: _CategoryBadge(icon: listing.category.icon),
+                  ListingPhoto(
+                    url: imageUrl,
+                    error: _placeholder(compact: true),
                   ),
-                  if (listing.images.length > 1)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: _PhotoCountBadge(count: listing.images.length),
-                    ),
                   if (showActions)
                     Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: _ActionOverlay(
-                        listingId: listing.id,
-                        sellerId: listing.user.id,
-                        sellerPhone: listing.user.phone,
-                        isFav: isFav,
+                      top: 6,
+                      right: 6,
+                      child: Material(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _ListingCardActions.toggleFavorite(
+                            ref,
+                            context,
+                            listing.id,
+                            strings,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              size: 16,
+                              color: isFav
+                                  ? AppColors.accentRed
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(6, 5, 6, 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    listing.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                      height: 1.2,
+            Expanded(
+              flex: 7,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      listing.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        height: 1.25,
+                        color: Color(0xFF222222),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    CurrencyFormat.format(listing.price, strings.locale),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.accentRed,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                      height: 1.2,
+                    const SizedBox(height: 6),
+                    Text(
+                      CurrencyFormat.format(listing.price, strings.locale),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF222222),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                  Text(
-                    listing.city,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 9,
-                      height: 1.2,
+                    const Spacer(),
+                    Text(
+                      listing.city,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 11,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.verified_outlined,
+                          size: 12,
+                          color: AppColors.primaryBlue.withValues(alpha: 0.85),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            listing.user.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -197,13 +230,10 @@ class _ListListingCard extends ConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  imageUrl != null
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _placeholder(),
-                        )
-                      : _placeholder(),
+                  ListingPhoto(
+                    url: imageUrl,
+                    error: _placeholder(),
+                  ),
                   Positioned(
                     top: 8,
                     left: 8,
@@ -307,102 +337,6 @@ class _PhotoCountBadge extends StatelessWidget {
   }
 }
 
-class _ActionOverlay extends ConsumerWidget {
-  const _ActionOverlay({
-    required this.listingId,
-    required this.sellerId,
-    required this.sellerPhone,
-    required this.isFav,
-  });
-
-  final String listingId;
-  final String sellerId;
-  final String? sellerPhone;
-  final bool isFav;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final strings = ref.watch(stringsProvider);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [
-            Colors.black.withValues(alpha: 0.72),
-            Colors.transparent,
-          ],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(2, 10, 2, 2),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _OverlayAction(
-              icon: Icons.phone,
-              color: AppColors.accentGold,
-              onPressed: () => _ListingCardActions.callSeller(
-                context,
-                sellerPhone,
-                strings,
-              ),
-            ),
-            _OverlayAction(
-              icon: isFav ? Icons.favorite : Icons.favorite_border,
-              color: isFav ? AppColors.accentRed : Colors.white,
-              onPressed: () => _ListingCardActions.toggleFavorite(
-                ref,
-                context,
-                listingId,
-                strings,
-              ),
-            ),
-            _OverlayAction(
-              icon: Icons.chat_bubble_outline,
-              color: Colors.white,
-              onPressed: () => _ListingCardActions.startChat(
-                ref,
-                context,
-                listingId: listingId,
-                sellerId: sellerId,
-                strings: strings,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OverlayAction extends StatelessWidget {
-  const _OverlayAction({
-    required this.icon,
-    required this.color,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final Color color;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 32,
-      height: 28,
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        iconSize: 16,
-        onPressed: onPressed,
-        icon: Icon(icon, color: color),
-      ),
-    );
-  }
-}
-
 class _ListActionsBar extends ConsumerWidget {
   const _ListActionsBar({
     required this.listingId,
@@ -477,7 +411,7 @@ class _ListingCardActions {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(strings.loginRequired)),
     );
-    context.go('/login');
+    showLoginModal(context);
   }
 
   static Future<void> toggleFavorite(

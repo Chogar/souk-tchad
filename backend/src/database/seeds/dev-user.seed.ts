@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
-import { User, UserPlan } from '../../entities/user.entity';
+import { User, UserPlan, UserRole } from '../../entities/user.entity';
 
 const DEV_USERS = [
   {
@@ -9,6 +9,15 @@ const DEV_USERS = [
     name: 'Chogar',
     phone: '+23566000000',
     plan: UserPlan.FREE,
+    role: UserRole.USER,
+  },
+  {
+    email: 'admin@souk-tchad.com',
+    password: 'AdminSouk1',
+    name: 'Admin Souk',
+    phone: '+23566000999',
+    plan: UserPlan.PROFESSIONAL,
+    role: UserRole.ADMIN,
   },
   {
     email: 'amina.test@souk-tchad.com',
@@ -16,6 +25,7 @@ const DEV_USERS = [
     name: 'Amina Test',
     phone: '+23566000001',
     plan: UserPlan.FREE,
+    role: UserRole.USER,
   },
   {
     email: 'oumar@gmail.com',
@@ -23,6 +33,7 @@ const DEV_USERS = [
     name: 'Oumar',
     phone: '+23566000002',
     plan: UserPlan.FREE,
+    role: UserRole.USER,
   },
 ] as const;
 
@@ -40,6 +51,8 @@ export async function seedDevUser(dataSource: DataSource) {
       existing.isEmailVerified = true;
       existing.name = account.name;
       existing.phone = account.phone;
+      existing.role = account.role;
+      existing.plan = account.plan;
       await usersRepository.save(existing);
       continue;
     }
@@ -51,6 +64,7 @@ export async function seedDevUser(dataSource: DataSource) {
         passwordHash,
         plan: account.plan,
         phone: account.phone,
+        role: account.role,
         isEmailVerified: true,
       }),
     );

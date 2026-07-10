@@ -7,6 +7,7 @@ import '../../../core/utils/api_error.dart';
 import '../providers/my_listings_provider.dart';
 import '../utils/delete_listing_helper.dart';
 import '../widgets/my_listing_tile.dart';
+import 'create_listing_screen.dart';
 
 class MyListingsScreen extends ConsumerWidget {
   const MyListingsScreen({super.key});
@@ -20,7 +21,7 @@ class MyListingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(strings.myListings)),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/create-listing'),
+        onPressed: () => showCreateListingModal(context),
         child: const Icon(Icons.add),
       ),
       body: listingsAsync.when(
@@ -33,7 +34,7 @@ class MyListingsScreen extends ConsumerWidget {
                   Text(strings.noMyListingsYet),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
-                    onPressed: () => context.push('/create-listing'),
+                    onPressed: () => showCreateListingModal(context),
                     icon: const Icon(Icons.add),
                     label: Text(strings.createListing),
                   ),

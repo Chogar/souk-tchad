@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/l10n/app_strings.dart';
@@ -6,6 +7,9 @@ Future<ImageSource?> showVideoSourceSheet(
   BuildContext context,
   AppStrings strings,
 ) {
+  if (kIsWeb) {
+    return Future.value(ImageSource.gallery);
+  }
   return showModalBottomSheet<ImageSource>(
     context: context,
     builder: (ctx) => SafeArea(
@@ -32,6 +36,9 @@ Future<ImageSource?> showPhotoSourceSheet(
   BuildContext context,
   AppStrings strings,
 ) {
+  if (kIsWeb) {
+    return Future.value(ImageSource.gallery);
+  }
   return showModalBottomSheet<ImageSource>(
     context: context,
     builder: (ctx) => SafeArea(

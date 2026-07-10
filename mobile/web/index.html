@@ -1,46 +1,100 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Souk Tchad — marketplace au Tchad.">
+  <meta name="description" content="Souk Tchad — marketplace au Tchad. Achetez et vendez près de chez vous.">
+  <meta name="theme-color" content="#002663">
+  <meta property="og:title" content="Souk Tchad">
+  <meta property="og:description" content="Marketplace au Tchad — annonces, chat et recherche.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="canonical" href="https://www.experiencetech-td.com/">
 
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Souk Tchad">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <title>Souk Tchad</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #002663;
+    }
+    .boot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #003080 0%, #002663 45%, #001233 100%);
+      color: #fff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      z-index: 9999;
+      transition: opacity 0.25s ease;
+    }
+    .boot.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .boot img {
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+      border-radius: 20px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+      background: #fff;
+    }
+    .boot h1 {
+      margin: 18px 0 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+    .boot .bar {
+      margin-top: 22px;
+      width: 120px;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.18);
+      overflow: hidden;
+    }
+    .boot .bar > span {
+      display: block;
+      height: 100%;
+      width: 40%;
+      background: #FFCC00;
+      animation: slide 1s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(320%); }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="boot" class="boot">
+    <img src="logo.png" alt="Souk Tchad" width="96" height="96">
+    <h1>Souk Tchad</h1>
+    <div class="bar"><span></span></div>
+  </div>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var boot = document.getElementById('boot');
+      if (!boot) return;
+      boot.classList.add('hidden');
+      setTimeout(function () { boot.remove(); }, 280);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

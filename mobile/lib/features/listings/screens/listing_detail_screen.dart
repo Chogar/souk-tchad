@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
+import '../../../core/layout/app_breakpoints.dart';
 import '../../../core/models/listing_model.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/providers/locale_provider.dart';
@@ -10,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/utils/currency_format.dart';
 import '../widgets/listing_actions_bar.dart';
+import '../widgets/listing_photo.dart';
 
 final listingDetailProvider =
     FutureProvider.family<ListingModel, String>((ref, id) async {
@@ -73,148 +75,151 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
         orElse: () => null,
       ),
       body: listingAsync.when(
-        data: (listing) => SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.only(bottom: 88),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _MediaGallery(
-                listing: listing,
-                api: api,
-                pageController: _pageController,
-                mediaIndex: _mediaIndex,
-                onPageChanged: (i) => setState(() => _mediaIndex = i),
-              ),
-              Transform.translate(
-                offset: const Offset(0, -20),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _InfoCard(
+        data: (listing) {
+          final sideInset =
+              AppBreakpoints.pageHorizontalInset(MediaQuery.sizeOf(context).width);
+          return SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(sideInset, 0, sideInset, 88),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppBreakpoints.pageMaxWidth,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _MediaGallery(
+                      listing: listing,
+                      api: api,
+                      pageController: _pageController,
+                      mediaIndex: _mediaIndex,
+                      onPageChanged: (i) => setState(() => _mediaIndex = i),
+                    ),
+                    Transform.translate(
+                      offset: const Offset(0, -16),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              listing.title,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              CurrencyFormat.format(
-                                listing.price,
-                                strings.locale,
-                              ),
-                              style: const TextStyle(
-                                color: AppColors.accentRed,
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _TagChip(
-                                  icon: listing.category.icon,
-                                  label: strings.listingCategoryLabel(
-                                    slug: listing.category.slug,
-                                    customCategoryName:
-                                        listing.customCategoryName,
-                                  ),
-                                  color: AppColors.primaryBlue,
-                                ),
-                                _TagChip(
-                                  icon: '📍',
-                                  label: listing.city,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _InfoCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.description_outlined,
-                                  size: 20,
-                                  color: AppColors.primaryBlue,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  strings.description,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              listing.description,
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(height: 1.5),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _InfoCard(
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 26,
-                              backgroundColor:
-                                  AppColors.primaryBlue.withValues(alpha: 0.1),
-                              child: Text(
-                                listing.user.name[0].toUpperCase(),
-                                style: const TextStyle(
-                                  color: AppColors.primaryBlue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
+                            _InfoCard(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    strings.seller,
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 12,
-                                    ),
+                                    listing.title,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
+                                  const SizedBox(height: 8),
                                   Text(
-                                    listing.user.name,
+                                    CurrencyFormat.format(
+                                      listing.price,
+                                      strings.locale,
+                                    ),
                                     style: const TextStyle(
+                                      color: AppColors.accentRed,
+                                      fontSize: 22,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 10),
+                                  _TagChip(
+                                    icon: '📍',
+                                    label: listing.city,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            _InfoCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.description_outlined,
+                                        size: 18,
+                                        color: AppColors.primaryBlue,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        strings.description,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
                                   Text(
-                                    strings.publishedOn(
-                                      dateFormat.format(listing.createdAt),
+                                    listing.description,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(height: 1.45),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            _InfoCard(
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: AppColors.primaryBlue
+                                        .withValues(alpha: 0.1),
+                                    child: Text(
+                                      listing.user.name[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        color: AppColors.primaryBlue,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 12,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          strings.seller,
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        Text(
+                                          listing.user.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          strings.publishedOn(
+                                            dateFormat
+                                                .format(listing.createdAt),
+                                          ),
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -223,13 +228,13 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Text(strings.errorWith(apiErrorMessage(e, strings))),
@@ -326,100 +331,146 @@ class _MediaGalleryState extends State<_MediaGallery> {
   Widget build(BuildContext context) {
     if (_itemCount == 0) {
       return Container(
-        height: 280,
+        height: 220,
         color: Colors.grey.shade200,
         child: const Center(
-          child: Icon(Icons.image_outlined, size: 64, color: Colors.grey),
+          child: Icon(Icons.image_outlined, size: 48, color: Colors.grey),
         ),
       );
     }
 
-    return Stack(
-      children: [
-        SizedBox(
-          height: 300,
-          child: PageView.builder(
-            controller: widget.pageController,
-            itemCount: _itemCount,
-            onPageChanged: _handlePageChanged,
-            itemBuilder: (context, index) {
-              if (_isVideoPage(index)) {
-                return _buildVideoSlide();
-              }
-              return Image.network(
-                widget.api.mediaUrl(widget.listing.images[index]),
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.broken_image, size: 64),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final galleryWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        final galleryHeight = (galleryWidth * 0.85).clamp(300.0, 480.0);
+
+        return Stack(
+          children: [
+            SizedBox(
+              height: galleryHeight,
+              width: double.infinity,
+              child: PageView.builder(
+                controller: widget.pageController,
+                itemCount: _itemCount,
+                onPageChanged: _handlePageChanged,
+                itemBuilder: (context, index) {
+                  if (_isVideoPage(index)) {
+                    return _buildVideoSlide();
+                  }
+                  return ListingPhoto(
+                    url: widget.api.mediaUrl(widget.listing.images[index]),
+                    error: Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(
+                        child: Icon(Icons.broken_image, size: 64),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (_itemCount > 1) ...[
+              Positioned(
+                left: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _GalleryNavButton(
+                    icon: Icons.chevron_left,
+                    enabled: widget.mediaIndex > 0,
+                    onTap: () => _goToPage(widget.mediaIndex - 1),
+                  ),
                 ),
-              );
-            },
-          ),
-        ),
-        if (_itemCount > 1)
-          Positioned(
-            bottom: 32,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _itemCount,
-                (i) => Container(
-                  width: i == widget.mediaIndex ? 20 : 8,
-                  height: 8,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
+              ),
+              Positioned(
+                right: 8,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _GalleryNavButton(
+                    icon: Icons.chevron_right,
+                    enabled: widget.mediaIndex < _itemCount - 1,
+                    onTap: () => _goToPage(widget.mediaIndex + 1),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 28,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    _itemCount,
+                    (i) => Container(
+                      width: i == widget.mediaIndex ? 20 : 8,
+                      height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        color: i == widget.mediaIndex
+                            ? Colors.white
+                            : Colors.white.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: MediaQuery.paddingOf(context).top + 56,
+                right: 16,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: i == widget.mediaIndex
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.5),
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    '${widget.mediaIndex + 1}/$_itemCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ),
               ),
-            ),
-          ),
-        if (_itemCount > 1)
-          Positioned(
-            top: MediaQuery.paddingOf(context).top + 56,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                '${widget.mediaIndex + 1}/$_itemCount',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-          ),
-        if (_isVideoPage(widget.mediaIndex))
-          Positioned(
-            top: MediaQuery.paddingOf(context).top + 56,
-            left: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.videocam, color: Colors.white, size: 14),
-                  SizedBox(width: 4),
-                  Text(
-                    'Vidéo',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+            ],
+            if (_isVideoPage(widget.mediaIndex))
+              Positioned(
+                top: MediaQuery.paddingOf(context).top + 56,
+                left: 16,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ],
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.videocam, color: Colors.white, size: 14),
+                      SizedBox(width: 4),
+                      Text(
+                        'Vidéo',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-      ],
+          ],
+        );
+      },
+    );
+  }
+
+  void _goToPage(int index) {
+    if (index < 0 || index >= _itemCount) return;
+    widget.pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
     );
   }
 
@@ -468,6 +519,40 @@ class _MediaGalleryState extends State<_MediaGallery> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _GalleryNavButton extends StatelessWidget {
+  const _GalleryNavButton({
+    required this.icon,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: enabled ? 0.45 : 0.2),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(
+            icon,
+            color: Colors.white.withValues(alpha: enabled ? 1 : 0.45),
+            size: 28,
+          ),
+        ),
+      ),
     );
   }
 }

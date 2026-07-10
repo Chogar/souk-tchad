@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../constants/api_constants.dart';
 
 class AdBanner extends StatefulWidget {
   const AdBanner({super.key, required this.showAds});
@@ -24,10 +25,12 @@ class _AdBannerState extends State<AdBanner> {
   }
 
   void _loadAd() {
+    final unitId = kDebugMode
+        ? 'ca-app-pub-3940256099942544/6300978111'
+        : ApiConstants.admobBannerUnitId;
+
     _bannerAd = BannerAd(
-      adUnitId: kDebugMode
-          ? 'ca-app-pub-3940256099942544/6300978111'
-          : 'ca-app-pub-XXXXXXXX/YYYYYYYY',
+      adUnitId: unitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(

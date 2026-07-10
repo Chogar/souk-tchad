@@ -1,3 +1,4 @@
+import '../constants/api_constants.dart';
 import '../providers/locale_provider.dart';
 
 class AppStrings {
@@ -33,6 +34,7 @@ class AppStrings {
 
   // Navigation
   String get home => tr(ar: 'الرئيسية', fr: 'Accueil', en: 'Home');
+  String get back => tr(ar: 'رجوع', fr: 'Retour', en: 'Back');
   String get favorites => tr(ar: 'المفضلة', fr: 'Favoris', en: 'Favorites');
   String get favorite => tr(ar: 'مفضلة', fr: 'Favori', en: 'Favorite');
   String get messages => tr(ar: 'الرسائل', fr: 'Messages', en: 'Messages');
@@ -274,6 +276,13 @@ class AppStrings {
       );
   String get supportEmail => 'support@experiencetech-td.com';
   String get experienceTechWebsite => 'https://www.experiencetech-td.com/';
+  String get privacyPolicyUrl => ApiConstants.privacyPolicyUrl;
+  String get termsOfUseUrl => ApiConstants.termsOfUseUrl;
+  String get openWebsite => tr(
+        ar: 'فتح الموقع',
+        fr: 'Ouvrir le site',
+        en: 'Open website',
+      );
 
   String get experienceTechCompanyName => 'Expérience Tech Sarl';
 
@@ -857,6 +866,11 @@ Version: 0.1.0''',
       );
   String get logout =>
       tr(ar: 'تسجيل الخروج', fr: 'Se déconnecter', en: 'Log out');
+  String get logoutConfirm => tr(
+        ar: 'هل تريد تسجيل الخروج؟',
+        fr: 'Voulez-vous vraiment vous déconnecter ?',
+        en: 'Do you really want to log out?',
+      );
   String get deleteAccount => tr(
         ar: 'حذف الحساب',
         fr: 'Supprimer mon compte',
@@ -1136,6 +1150,21 @@ Version: 0.1.0''',
         fr: 'Améliorer avec IA',
         en: 'Improve with AI',
       );
+  String get dictateListing => tr(
+        ar: 'إملاء صوتي',
+        fr: 'Dictée vocale',
+        en: 'Voice dictation',
+      );
+  String get listening => tr(
+        ar: 'جاري الاستماع...',
+        fr: 'Écoute en cours...',
+        en: 'Listening...',
+      );
+  String get speechUnavailable => tr(
+        ar: 'التعرف على الصوت غير متاح',
+        fr: 'Reconnaissance vocale indisponible',
+        en: 'Speech recognition unavailable',
+      );
   String addPhotos(int current, int max) => tr(
         ar: 'إضافة صور ($current/$max)',
         fr: 'Ajouter des photos ($current/$max)',
@@ -1232,10 +1261,250 @@ Version: 0.1.0''',
         en: 'Plan $plan activated',
       );
   String get paymentNote => tr(
-        ar: 'سيتم دمج الدفع الحقيقي قبل النشر.',
-        fr: 'Le paiement réel sera intégré avant le déploiement.',
-        en: 'Real payment will be integrated before launch.',
+        ar: 'ادفع عبر موبايل موني ثم أكّد مع الدعم لتفعيل الخطة.',
+        fr:
+            'Payez par Mobile Money ; le support active votre plan après vérification.',
+        en:
+            'Pay via Mobile Money; support activates your plan after verification.',
       );
+  String get checkoutStarted => tr(
+        ar: 'تم إنشاء طلب الدفع',
+        fr: 'Demande de paiement créée',
+        en: 'Payment request created',
+      );
+  String paymentInstructions(String amount, String number) => tr(
+        ar: 'أرسل $amount إلى $number ثم راسل الدعم برقم العملية.',
+        fr:
+            'Envoyez $amount FCFA au $number, puis contactez le support avec la référence de commande.',
+        en:
+            'Send $amount XAF to $number, then contact support with the order reference.',
+      );
+  String get paymentModalTitle => tr(
+        ar: 'الدفع عبر موبايل موني',
+        fr: 'Paiement Mobile Money',
+        en: 'Mobile Money payment',
+      );
+  String paymentModalSubtitle(String plan) => tr(
+        ar: 'تفعيل خطة $plan',
+        fr: 'Activer le plan $plan',
+        en: 'Activate the $plan plan',
+      );
+  String get payerReferenceLabel => tr(
+        ar: 'رقم هاتفك',
+        fr: 'Votre numéro Mobile Money',
+        en: 'Your Mobile Money number',
+      );
+  String get payerPhoneLabel => tr(
+        ar: 'رقم Airtel Money أو Moov Money',
+        fr: 'Numéro Airtel Money ou Moov Money',
+        en: 'Airtel Money or Moov Money number',
+      );
+  String get payerPhoneRequired => tr(
+        ar: 'أدخل رقم الدفع المستخدم',
+        fr: 'Indiquez le numéro utilisé pour payer',
+        en: 'Enter the number used to pay',
+      );
+  String get payerReferenceHint => tr(
+        ar: '+235...',
+        fr: '+235...',
+        en: '+235...',
+      );
+  String get momoOperatorLabel => tr(
+        ar: 'المشغّل',
+        fr: 'Opérateur',
+        en: 'Operator',
+      );
+  String get airtelMoney =>
+      tr(ar: 'Airtel Money', fr: 'Airtel Money', en: 'Airtel Money');
+  String get moovMoney =>
+      tr(ar: 'Moov Money', fr: 'Moov Money', en: 'Moov Money');
+  String get paymentProofLabel => tr(
+        ar: 'إثبات الدفع (لقطة شاشة)',
+        fr: 'Preuve de paiement (capture d’écran)',
+        en: 'Payment proof (screenshot)',
+      );
+  String get paymentProofHint => tr(
+        ar: 'أرفق لقطة شاشة لتأكيد التحويل. سيتحقق المشرف ثم يفعّل الاشتراك.',
+        fr:
+            'Joignez la capture d’écran du transfert. L’administrateur vérifiera puis activera l’abonnement.',
+        en:
+            'Attach a screenshot of the transfer. An admin will verify then activate the subscription.',
+      );
+  String get paymentProofRequired => tr(
+        ar: 'لقطة شاشة الدفع مطلوبة',
+        fr: 'La capture d’écran du paiement est obligatoire',
+        en: 'Payment screenshot is required',
+      );
+  String get addPaymentScreenshot => tr(
+        ar: 'إضافة لقطة شاشة',
+        fr: 'Ajouter une capture d’écran',
+        en: 'Add a screenshot',
+      );
+  String get submitPaymentRequest => tr(
+        ar: 'إرسال طلب الدفع',
+        fr: 'Envoyer la demande',
+        en: 'Submit payment request',
+      );
+  String get payNow => tr(
+        ar: 'إرسال طلب الدفع',
+        fr: 'Envoyer la demande',
+        en: 'Submit payment request',
+      );
+  String get amountToSend =>
+      tr(ar: 'المبلغ', fr: 'Montant', en: 'Amount');
+  String paymentSendTo(String amount, String number) => tr(
+        ar: 'أرسل $amount فرنك إلى $number ثم أرفق لقطة الشاشة أدناه.',
+        fr:
+            'Envoyez $amount FCFA au $number, puis joignez la capture d’écran ci-dessous.',
+        en:
+            'Send $amount XAF to $number, then attach the screenshot below.',
+      );
+  String get paymentNumberCopied => tr(
+        ar: 'تم نسخ الرقم',
+        fr: 'Numéro copié',
+        en: 'Number copied',
+      );
+  String get paymentNumberNotConfigured => tr(
+        ar: 'لم يتم ضبط رقم الدفع بعد. تواصل مع الدعم.',
+        fr:
+            'Aucun numéro de paiement configuré pour cet opérateur. Contactez le support.',
+        en:
+            'No payment number configured for this operator. Contact support.',
+      );
+  String get paymentRequestSentTitle => tr(
+        ar: 'تم إرسال الطلب',
+        fr: 'Demande envoyée',
+        en: 'Request sent',
+      );
+  String get paymentRequestSentBody => tr(
+        ar:
+            'سيتحقق المشرف من الدفع عبر لقطة الشاشة ثم يفعّل اشتراكك.',
+        fr:
+            'L’administrateur vérifiera votre paiement via la capture d’écran, puis activera votre abonnement.',
+        en:
+            'An admin will verify your payment via the screenshot, then activate your subscription.',
+      );
+  String get momoNumberLabel => tr(
+        ar: 'رقم موبايل موني',
+        fr: 'Numéro Mobile Money',
+        en: 'Mobile Money number',
+      );
+  String get adminPaymentSettingsTitle => tr(
+        ar: 'إعدادات الدفع',
+        fr: 'Paramètres de paiement',
+        en: 'Payment settings',
+      );
+  String get adminPaymentSettingsProfileSubtitle => tr(
+        ar: 'أرقام Airtel و Moov وإشعارات البريد',
+        fr: 'Numéros Airtel/Moov et notifications e-mail',
+        en: 'Airtel/Moov numbers and email notifications',
+      );
+  String get adminPaymentSettingsSubtitle => tr(
+        ar:
+            'هذه الأرقام تظهر تلقائياً للعملاء عند الاشتراك. أرفق لقطة الشاشة للتحقق.',
+        fr:
+            'Ces numéros s’affichent automatiquement aux clients lors de l’abonnement. Ils joignent une capture d’écran pour validation.',
+        en:
+            'These numbers are shown automatically to clients when subscribing. They attach a screenshot for verification.',
+      );
+  String get airtelMoneyNumberLabel => tr(
+        ar: 'رقم Airtel Money (للاستلام)',
+        fr: 'Numéro Airtel Money (réception)',
+        en: 'Airtel Money number (receive)',
+      );
+  String get moovMoneyNumberLabel => tr(
+        ar: 'رقم Moov Money (للاستلام)',
+        fr: 'Numéro Moov Money (réception)',
+        en: 'Moov Money number (receive)',
+      );
+  String get adminPaymentNumbersHint => tr(
+        ar: 'يظهر كل رقم للعميل حسب المشغّل الذي يختاره.',
+        fr:
+            'Chaque numéro s’affiche chez le client selon l’opérateur choisi.',
+        en: 'Each number is shown to the client based on the operator they pick.',
+      );
+  String get adminPaymentNotificationsTitle => tr(
+        ar: 'إشعارات الدفع',
+        fr: 'Notifications de paiement',
+        en: 'Payment notifications',
+      );
+  String get adminPaymentNotificationEmail => tr(
+        ar: 'البريد لاستلام طلبات الدفع',
+        fr: 'E-mail pour recevoir les demandes de paiement',
+        en: 'Email to receive payment requests',
+      );
+  String get adminPaymentNotifyOnPayment => tr(
+        ar: 'إشعار بريد عند كل طلب دفع',
+        fr: 'E-mail à chaque nouvelle demande de paiement',
+        en: 'Email on each new payment request',
+      );
+  String get adminPaymentNotifyOnPaymentHint => tr(
+        ar: 'ستصلك رسالة عند إرسال عميل طلب اشتراك مع لقطة الشاشة.',
+        fr:
+            'Vous recevrez un e-mail quand un client envoie une demande d’abonnement avec capture.',
+        en:
+            'You will receive an email when a client submits a subscription request with a screenshot.',
+      );
+  String get adminPaymentSettingsSaved => tr(
+        ar: 'تم حفظ إعدادات الدفع',
+        fr: 'Paramètres de paiement enregistrés',
+        en: 'Payment settings saved',
+      );
+  String get adminPaymentPreviewTitle => tr(
+        ar: 'ما يراه العملاء',
+        fr: 'Aperçu client',
+        en: 'Client preview',
+      );
+  String get adminPaymentFlowHint => tr(
+        ar: 'يختار العميل المشغّل، يرسل المبلغ إلى الرقم المناسب، ثم يرفق لقطة الشاشة.',
+        fr:
+            'Le client choisit l’opérateur, envoie le montant au numéro affiché, puis joint une capture d’écran.',
+        en:
+            'The client picks an operator, sends the amount to the shown number, then attaches a screenshot.',
+      );
+  String get adminPaymentNumbersSection => tr(
+        ar: 'أرقام الاستلام',
+        fr: 'Numéros de réception',
+        en: 'Receiving numbers',
+      );
+  String get adminPaymentPhoneRequired => tr(
+        ar: 'أدخل رقماً صالحاً (8 أرقام على الأقل)',
+        fr: 'Indiquez un numéro valide (8 chiffres minimum)',
+        en: 'Enter a valid number (at least 8 digits)',
+      );
+  String get adminPaymentTapToConfigure => tr(
+        ar: 'اضغط للتعديل',
+        fr: 'Appuyez pour modifier',
+        en: 'Tap to edit',
+      );
+  String get adminPaymentTapToCollapse => tr(
+        ar: 'اضغط للطي',
+        fr: 'Appuyez pour replier',
+        en: 'Tap to collapse',
+      );
+  String get adminDashboardLink => tr(
+        ar: 'لوحة الإدارة',
+        fr: 'Tableau de bord admin',
+        en: 'Admin dashboard',
+      );
+  String get adminSectionTitle => tr(
+        ar: 'الإدارة',
+        fr: 'Administration',
+        en: 'Administration',
+      );
+  String get adminDashboardSubtitle => tr(
+        ar: 'الإحصائيات والمدفوعات والإشراف',
+        fr: 'Stats, paiements et modération',
+        en: 'Stats, payments and moderation',
+      );
+  String get orderReferenceLabel => tr(
+        ar: 'مرجع الطلب',
+        fr: 'Référence de commande',
+        en: 'Order reference',
+      );
+  String get close => tr(ar: 'إغلاق', fr: 'Fermer', en: 'Close');
+  String get copied =>
+      tr(ar: 'تم النسخ', fr: 'Copié', en: 'Copied');
 
   // Network errors
   String get serverUnreachable => tr(

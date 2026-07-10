@@ -1,0 +1,5 @@
+# Copier vers android/key.properties (non versionné) et renseigner le keystore.
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=souk-tchad
+storeFile=../keystore/souk-tchad-upload.jks

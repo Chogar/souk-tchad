@@ -5,6 +5,7 @@ import '../../../core/providers/locale_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/api_error.dart';
 import '../providers/plans_provider.dart';
+import '../widgets/payment_modal.dart';
 
 class SubscriptionsScreen extends ConsumerWidget {
   const SubscriptionsScreen({super.key});
@@ -21,7 +22,9 @@ class SubscriptionsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authStateProvider.notifier).logout(),
+            onPressed: () async {
+              await ref.read(authStateProvider.notifier).logout();
+            },
           ),
         ],
       ),
@@ -60,7 +63,7 @@ class SubscriptionsScreen extends ConsumerWidget {
                           Text(
                             plan.price == 0
                                 ? strings.free
-                                : strings.pricePerMonthUsd(plan.price),
+                                : strings.pricePerMonth(plan.price),
                             style: const TextStyle(
                               color: AppColors.accentRed,
                               fontWeight: FontWeight.bold,
@@ -81,6 +84,13 @@ class SubscriptionsScreen extends ConsumerWidget {
                       else
                         ElevatedButton(
                           onPressed: () async {
+                            if (plan.paymentRequired) {
+                              await showPaymentModal(
+                                context: context,
+                                plan: plan,
+                              );
+                              return;
+                            }
                             try {
                               final updated = await ref
                                   .read(subscriptionsServiceProvider)

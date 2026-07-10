@@ -40,6 +40,7 @@ export class UsersService {
         googleId: true,
         passwordHash: true,
         plan: true,
+        role: true,
         isEmailVerified: true,
         createdAt: true,
         updatedAt: true,
@@ -208,6 +209,7 @@ export class UsersService {
       avatarUrl: user.avatarUrl,
       phone: user.phone,
       plan: user.plan,
+      role: user.role ?? 'USER',
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,
     };

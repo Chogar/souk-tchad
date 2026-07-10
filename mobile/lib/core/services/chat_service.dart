@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../models/conversation_model.dart';
@@ -108,53 +110,51 @@ class ChatService {
 
   Future<MessageModel> sendVoiceMessage(
     String conversationId,
-    String filePath,
-  ) async {
+    Uint8List bytes, {
+    String filename = 'voice.m4a',
+  }) async {
     final formData = FormData.fromMap({
-      'audio': await MultipartFile.fromFile(
-        filePath,
-        filename: 'voice.m4a',
-      ),
+      'audio': MultipartFile.fromBytes(bytes, filename: filename),
     });
     final response = await _api.client.post(
       '/chat/conversations/$conversationId/voice',
       data: formData,
+      options: Options(contentType: 'multipart/form-data'),
     );
     return MessageModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<MessageModel> sendImageMessage(
     String conversationId,
-    String filePath, {
+    Uint8List bytes, {
     String? filename,
   }) async {
     final formData = FormData.fromMap({
-      'image': await MultipartFile.fromFile(
-        filePath,
+      'image': MultipartFile.fromBytes(
+        bytes,
         filename: filename ?? 'image.jpg',
       ),
     });
     final response = await _api.client.post(
       '/chat/conversations/$conversationId/image',
       data: formData,
+      options: Options(contentType: 'multipart/form-data'),
     );
     return MessageModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<MessageModel> sendDocumentMessage(
     String conversationId,
-    String filePath, {
+    Uint8List bytes, {
     required String filename,
   }) async {
     final formData = FormData.fromMap({
-      'document': await MultipartFile.fromFile(
-        filePath,
-        filename: filename,
-      ),
+      'document': MultipartFile.fromBytes(bytes, filename: filename),
     });
     final response = await _api.client.post(
       '/chat/conversations/$conversationId/document',
       data: formData,
+      options: Options(contentType: 'multipart/form-data'),
     );
     return MessageModel.fromJson(response.data as Map<String, dynamic>);
   }
