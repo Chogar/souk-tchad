@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/api_constants.dart';
 import '../errors/google_sign_in_canceled.dart';
@@ -12,17 +13,79 @@ class AuthService {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
-  Future<void> initGoogle() async {
-    final serverClientId = ApiConstants.googleServerClientId.isNotEmpty
-        ? ApiConstants.googleServerClientId
-        : ApiConstants.googleClientId;
+  /// Partagé entre instances (ApiService peut être recréé).
+  static bool _googleInitialized = false;
+  static Future<void>? _googleInitFuture;
 
-    await _googleSignIn.initialize(
-      clientId: ApiConstants.googleClientId.isNotEmpty
-          ? ApiConstants.googleClientId
-          : null,
-      serverClientId: serverClientId.isNotEmpty ? serverClientId : null,
-    );
+  /// Initialise Google Sign-In une seule fois (idempotent).
+  Future<void> initGoogle() async {
+    if (_googleInitialized) return;
+    if (_googleInitFuture != null) {
+      await _googleInitFuture;
+      return;
+    }
+
+    _googleInitFuture = () async {
+      final iosClientId = ApiConstants.googleClientId;
+      final webClientId = ApiConstants.googleServerClientId;
+
+      if (kIsWeb) {
+        // Sur le web, clientId = OAuth « Application Web ».
+        final webId =
+            webClientId.isNotEmpty ? webClientId : iosClientId;
+        await _googleSignIn.initialize(
+          clientId: webId.isNotEmpty ? webId : null,
+        );
+      } else {
+        // iOS/Android : client iOS + serverClientId Web (pour idToken).
+        await _googleSignIn.initialize(
+          clientId: iosClientId.isNotEmpty ? iosClientId : null,
+          serverClientId: webClientId.isNotEmpty ? webClientId : null,
+        );
+      }
+      _googleInitialized = true;
+    }();
+
+    try {
+      await _googleInitFuture;
+    } catch (e) {
+      _googleInitFuture = null;
+      final message = e.toString().toLowerCase();
+      if (message.contains('already been called') ||
+          message.contains('already initialized')) {
+        _googleInitialized = true;
+        return;
+      }
+      rethrow;
+    }
+  }
+
+  /// Affiche le sélecteur de comptes sans révoquer l'accès (évite les bugs).
+  Future<void> _showAccountPicker() async {
+    if (kIsWeb) return;
+    try {
+      await _googleSignIn.signOut().timeout(const Duration(seconds: 2));
+    } catch (_) {}
+  }
+
+  Future<GoogleSignInAccount> _authenticate({
+    required List<String> scopes,
+  }) async {
+    await initGoogle();
+    await _showAccountPicker();
+
+    try {
+      return await _googleSignIn.authenticate(scopeHint: scopes);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw GoogleSignInCanceled();
+      }
+      if (e.code == GoogleSignInExceptionCode.clientConfigurationError ||
+          e.code == GoogleSignInExceptionCode.providerConfigurationError) {
+        throw StateError('GOOGLE_INVALID_CLIENT');
+      }
+      rethrow;
+    }
   }
 
   Future<({String message, String email, String? devCode})> sendRegistrationOtp(
@@ -79,43 +142,6 @@ class AuthService {
     return UserModel.fromJson(response.data['user'] as Map<String, dynamic>);
   }
 
-  /// Récupère l'e-mail Gmail choisi sans créer de session.
-  Future<String?> pickGoogleEmail() async {
-    if (!isGoogleSignInConfigured) {
-      throw StateError('GOOGLE_NOT_CONFIGURED');
-    }
-
-    await initGoogle();
-
-    try {
-      await _googleSignIn.disconnect();
-    } catch (_) {
-      try {
-        await _googleSignIn.signOut();
-      } catch (_) {}
-    }
-
-    try {
-      final account = await _googleSignIn.authenticate(
-        scopeHint: const ['email'],
-      );
-      final email = account.email;
-      try {
-        await _googleSignIn.signOut();
-      } catch (_) {}
-      return email;
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        throw GoogleSignInCanceled();
-      }
-      if (e.code == GoogleSignInExceptionCode.clientConfigurationError ||
-          e.code == GoogleSignInExceptionCode.providerConfigurationError) {
-        throw StateError('GOOGLE_INVALID_CLIENT');
-      }
-      rethrow;
-    }
-  }
-
   Future<String> register({
     required String email,
     required String name,
@@ -156,35 +182,20 @@ class AuthService {
       throw StateError('GOOGLE_NOT_CONFIGURED');
     }
 
-    await initGoogle();
-
-    // Déconnecte pour afficher le sélecteur de tous les comptes Gmail du téléphone.
-    try {
-      await _googleSignIn.disconnect();
-    } catch (_) {
-      try {
-        await _googleSignIn.signOut();
-      } catch (_) {}
+    if (kIsWeb || !GoogleSignIn.instance.supportsAuthenticate()) {
+      throw StateError('GOOGLE_USE_WEB_BUTTON');
     }
 
-    late final GoogleSignInAccount account;
-    try {
-      account = await _googleSignIn.authenticate(
-        scopeHint: const ['email', 'profile', 'openid'],
-      );
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        throw GoogleSignInCanceled();
-      }
-      if (e.code == GoogleSignInExceptionCode.clientConfigurationError ||
-          e.code == GoogleSignInExceptionCode.providerConfigurationError) {
-        throw StateError('GOOGLE_INVALID_CLIENT');
-      }
-      rethrow;
-    }
+    final account = await _authenticate(
+      scopes: const ['email', 'profile', 'openid'],
+    );
+    return completeGoogleLogin(account);
+  }
 
+  /// Finalise la connexion après un compte Google (mobile ou événement web GIS).
+  Future<UserModel> completeGoogleLogin(GoogleSignInAccount account) async {
     final idToken = account.authentication.idToken;
-    if (idToken == null) {
+    if (idToken == null || idToken.isEmpty) {
       throw StateError('GOOGLE_NO_ID_TOKEN');
     }
 
@@ -210,9 +221,6 @@ class AuthService {
   Future<void> logoutGoogleOnly() async {
     try {
       await _googleSignIn.signOut().timeout(const Duration(seconds: 2));
-    } catch (_) {}
-    try {
-      await _googleSignIn.disconnect().timeout(const Duration(seconds: 2));
     } catch (_) {}
   }
 }

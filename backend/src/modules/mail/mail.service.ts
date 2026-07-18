@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
@@ -8,12 +12,13 @@ export class MailService {
   private transporter: nodemailer.Transporter | null = null;
 
   constructor(private readonly configService: ConfigService) {
-    const user = this.configService.get<string>('smtp.user');
-    const pass = this.configService.get<string>('smtp.pass');
+    const user = this.configService.get<string>('smtp.user')?.trim();
+    const pass = this.configService.get<string>('smtp.pass')?.trim();
 
     if (user && pass) {
       const port = this.configService.get<number>('smtp.port') ?? 587;
-      const host = this.configService.get<string>('smtp.host') ?? 'smtp.gmail.com';
+      const host =
+        this.configService.get<string>('smtp.host') ?? 'smtp.gmail.com';
       this.transporter = nodemailer.createTransport({
         host,
         port,
@@ -21,8 +26,25 @@ export class MailService {
         auth: { user, pass },
         ...(port === 587 ? { requireTLS: true } : {}),
       });
-      this.logger.log(`SMTP actif (${host}:${port})`);
+      this.logger.log(`SMTP actif (${host}:${port} → ${user})`);
+    } else {
+      this.logger.warn(
+        'SMTP non configuré — les e-mails OTP ne seront pas envoyés. Renseignez SMTP_USER + SMTP_PASS dans backend/.env',
+      );
     }
+  }
+
+  isConfigured(): boolean {
+    return this.transporter != null;
+  }
+
+  async verifyConnection(): Promise<void> {
+    if (!this.transporter) {
+      throw new ServiceUnavailableException(
+        'SMTP non configuré. Ajoutez SMTP_USER et SMTP_PASS (mot de passe d\'application Gmail).',
+      );
+    }
+    await this.transporter.verify();
   }
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
@@ -50,17 +72,19 @@ export class MailService {
 
   async sendRegistrationOtpEmail(email: string, code: string): Promise<void> {
     const html = `
-      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px">
-        <h2 style="color:#003080">Souk Tchad</h2>
-        <p>Bonjour,</p>
-        <p>Voici votre code de validation pour créer votre compte :</p>
-        <p style="font-size:32px;font-weight:700;letter-spacing:8px;color:#003080;margin:24px 0">${code}</p>
-        <p style="color:#666;font-size:13px">Ce code expire dans 10 minutes.</p>
-        <p style="color:#999;font-size:12px">Si vous n'avez pas demandé ce code, ignorez ce message.</p>
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#f5f7fb">
+        <div style="background:#fff;border-radius:12px;padding:28px;box-shadow:0 4px 24px rgba(0,0,0,.06)">
+          <h2 style="color:#003080;margin:0 0 12px">Souk Tchad</h2>
+          <p style="color:#333;line-height:1.5">Bonjour,</p>
+          <p style="color:#333;line-height:1.5">Voici votre code de validation pour créer votre compte :</p>
+          <p style="font-size:36px;font-weight:700;letter-spacing:10px;color:#003080;margin:28px 0;text-align:center">${code}</p>
+          <p style="color:#666;font-size:13px">Ce code expire dans <strong>10 minutes</strong>.</p>
+          <p style="color:#999;font-size:12px;margin-top:24px">Si vous n'avez pas demandé ce code, ignorez ce message.</p>
+        </div>
       </div>
     `;
 
-    await this.send(email, 'Souk Tchad — Code de validation', html);
+    await this.send(email, `Souk Tchad — Code ${code}`, html);
   }
 
   async sendPaymentRequestNotification(data: {
@@ -101,17 +125,33 @@ export class MailService {
 
   private async send(to: string, subject: string, html: string): Promise<void> {
     if (!this.transporter) {
+      const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+      if (isProd) {
+        throw new ServiceUnavailableException(
+          'Envoi d\'e-mail indisponible : SMTP non configuré sur le serveur.',
+        );
+      }
       this.logger.warn(
         `SMTP non configuré — e-mail simulé pour ${to}: ${subject}`,
       );
       return;
     }
 
-    await this.transporter.sendMail({
-      from: this.configService.get<string>('smtp.from'),
-      to,
-      subject,
-      html,
-    });
+    try {
+      const info = await this.transporter.sendMail({
+        from: this.configService.get<string>('smtp.from'),
+        to,
+        subject,
+        html,
+      });
+      this.logger.log(`E-mail envoyé à ${to} (${info.messageId})`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Erreur SMTP inconnue';
+      this.logger.error(`Échec envoi e-mail à ${to}: ${message}`);
+      throw new ServiceUnavailableException(
+        'Impossible d\'envoyer l\'e-mail. Vérifiez SMTP_USER / SMTP_PASS (mot de passe d\'application Gmail).',
+      );
+    }
   }
 }

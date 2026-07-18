@@ -13,7 +13,8 @@ import '../../../core/providers/locale_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/utils/currency_format.dart';
-import '../../auth/screens/login_screen.dart';
+import '../../../core/widgets/back_or_home_button.dart';
+import '../../auth/auth_modals.dart';
 import '../../home/providers/listings_provider.dart';
 import '../providers/my_listings_provider.dart';
 import '../utils/listing_media_picker.dart';
@@ -642,7 +643,10 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(title: Text(strings.createListing)),
+      appBar: AppBar(
+        leading: const BackOrHomeButton(),
+        title: Text(strings.createListing),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),

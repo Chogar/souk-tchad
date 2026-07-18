@@ -122,11 +122,6 @@ class AppStrings {
         fr: 'Terminer l\'inscription',
         en: 'Finish sign-up',
       );
-  String get googleEmailPicker => tr(
-        ar: 'اختيار Gmail',
-        fr: 'Choisir mon Gmail',
-        en: 'Pick my Gmail',
-      );
   String get invalidOtp => tr(
         ar: 'رمز غير صالح (6 أرقام)',
         fr: 'Code invalide (6 chiffres)',
@@ -161,6 +156,11 @@ class AppStrings {
         ar: 'معرّف Google OAuth غير صالح. أنشئ عميل iOS + Web في Google Cloud ثم نفّذ apply-google-config.sh',
         fr: 'Identifiant Google OAuth invalide. Créez un client iOS + Web sur Google Cloud, puis : bash apply-google-config.sh <ID_iOS> <ID_Web>',
         en: 'Invalid Google OAuth client. Create iOS + Web clients on Google Cloud, then run apply-google-config.sh',
+      );
+  String get googleUseWebButton => tr(
+        ar: 'على الويب استخدم زر Google الرسمي أدناه.',
+        fr: 'Sur le web, utilisez le bouton Google officiel ci-dessous.',
+        en: 'On the web, use the official Google button below.',
       );
   String get alreadyHaveAccount => tr(
         ar: 'لديك حساب؟ سجّل الدخول',
@@ -597,16 +597,16 @@ Version: 0.1.0''',
   String get discussion =>
       tr(ar: 'محادثة', fr: 'Discussion', en: 'Chat');
   String get chatEmptyHint => tr(
-        ar: 'اكتب رسالة أو اضغط مطولاً على الميكروفون\nلإرسال رسالة صوتية',
-        fr: 'Écrivez un message ou maintenez le micro\npour envoyer un vocal',
-        en: 'Type a message or hold the mic\nto send a voice message',
+        ar: 'اكتب رسالة أو اضغط على الميكروفون\nلإرسال رسالة صوتية',
+        fr: 'Écrivez un message ou appuyez sur le micro\npour envoyer un vocal',
+        en: 'Type a message or tap the mic\nto send a voice message',
       );
   String get yourMessage =>
       tr(ar: 'رسالتك...', fr: 'Votre message...', en: 'Your message...');
   String get recordingHint => tr(
-        ar: 'جاري التسجيل... ارفع إصبعك للإرسال',
-        fr: 'Enregistrement... Relâchez pour envoyer',
-        en: 'Recording... Release to send',
+        ar: 'جاري التسجيل... اضغط للإيقاف والإرسال',
+        fr: 'Enregistrement… Appuyez pour arrêter et envoyer',
+        en: 'Recording… Tap to stop and send',
       );
   String get micPermission => tr(
         ar: 'اسمح بالميكروفون لإرسال رسالة صوتية',
@@ -1497,6 +1497,237 @@ Version: 0.1.0''',
         fr: 'Stats, paiements et modération',
         en: 'Stats, payments and moderation',
       );
+  String get adminBadge => tr(ar: 'مسؤول', fr: 'Admin', en: 'Admin');
+  String get adminOverviewTab =>
+      tr(ar: 'نظرة عامة', fr: 'Vue d’ensemble', en: 'Overview');
+  String get adminPaymentsTab =>
+      tr(ar: 'المدفوعات', fr: 'Paiements', en: 'Payments');
+  String get adminListingsTab =>
+      tr(ar: 'الإعلانات', fr: 'Annonces', en: 'Listings');
+  String get adminRefresh =>
+      tr(ar: 'تحديث', fr: 'Actualiser', en: 'Refresh');
+  String get adminSpaceLabel => tr(
+        ar: 'مساحة المسؤول',
+        fr: 'Espace administrateur',
+        en: 'Admin area',
+      );
+  String adminHello(String name) => tr(
+        ar: 'مرحباً، $name',
+        fr: 'Bonjour, $name',
+        en: 'Hello, $name',
+      );
+  String get adminAccessDeniedTitle =>
+      tr(ar: 'وصول مقيد', fr: 'Accès réservé', en: 'Access restricted');
+  String get adminAccessDeniedBody => tr(
+        ar: 'يمكن للمسؤولين فقط فتح هذه المساحة.',
+        fr: 'Seuls les administrateurs peuvent ouvrir cet espace.',
+        en: 'Only administrators can open this area.',
+      );
+  String get adminConfirmPaymentTitle => tr(
+        ar: 'تأكيد الدفع؟',
+        fr: 'Confirmer le paiement ?',
+        en: 'Confirm payment?',
+      );
+  String adminConfirmPaymentBody(String plan, String user) => tr(
+        ar: 'سيتم تفعيل خطة $plan لـ $user.',
+        fr: 'Le plan $plan sera activé pour $user.',
+        en: 'Plan $plan will be activated for $user.',
+      );
+  String get adminThisUser =>
+      tr(ar: 'هذا المستخدم', fr: 'cet utilisateur', en: 'this user');
+  String get adminConfirm =>
+      tr(ar: 'تأكيد', fr: 'Confirmer', en: 'Confirm');
+  String get adminPaymentConfirmed => tr(
+        ar: 'تم تأكيد الدفع وتفعيل الخطة.',
+        fr: 'Paiement confirmé, plan activé.',
+        en: 'Payment confirmed, plan activated.',
+      );
+  String get adminRejectPaymentTitle => tr(
+        ar: 'رفض هذا الدفع؟',
+        fr: 'Refuser ce paiement ?',
+        en: 'Reject this payment?',
+      );
+  String get adminRejectPaymentBody => tr(
+        ar: 'سيتم وضع علامة على الدفع كمرفوض.',
+        fr: 'Le paiement sera marqué comme refusé.',
+        en: 'The payment will be marked as rejected.',
+      );
+  String get adminReject =>
+      tr(ar: 'رفض', fr: 'Refuser', en: 'Reject');
+  String get adminUser =>
+      tr(ar: 'مستخدم', fr: 'Utilisateur', en: 'User');
+  String get adminPlan => tr(ar: 'الخطة', fr: 'Plan', en: 'Plan');
+  String get adminAmount =>
+      tr(ar: 'المبلغ', fr: 'Montant', en: 'Amount');
+  String get adminDate => tr(ar: 'التاريخ', fr: 'Date', en: 'Date');
+  String get adminDetails =>
+      tr(ar: 'التفاصيل', fr: 'Détails', en: 'Details');
+  String get adminViewDetails =>
+      tr(ar: 'عرض التفاصيل', fr: 'Voir les détails', en: 'View details');
+  String get adminStatUsers =>
+      tr(ar: 'المستخدمون', fr: 'Utilisateurs', en: 'Users');
+  String adminStatVerified(int n) => tr(
+        ar: '$n مُتحقق',
+        fr: '$n vérifiés',
+        en: '$n verified',
+      );
+  String get adminStatActiveListings =>
+      tr(ar: 'إعلانات نشطة', fr: 'Annonces actives', en: 'Active listings');
+  String adminStatTotalListings(int n) => tr(
+        ar: '$n إجمالاً',
+        fr: '$n au total',
+        en: '$n total',
+      );
+  String get adminStatToConfirm =>
+      tr(ar: 'بانتظار التأكيد', fr: 'À confirmer', en: 'To confirm');
+  String adminStatAlreadyPaid(int n) => tr(
+        ar: '$n مدفوع مسبقاً',
+        fr: '$n déjà payés',
+        en: '$n already paid',
+      );
+  String get adminStatRevenue =>
+      tr(ar: 'الإيرادات', fr: 'Revenus', en: 'Revenue');
+  String get adminStatConfirmedSubs => tr(
+        ar: 'اشتراكات مؤكدة',
+        fr: 'Abonnements confirmés',
+        en: 'Confirmed subscriptions',
+      );
+  String get adminStatConversations =>
+      tr(ar: 'المحادثات', fr: 'Conversations', en: 'Conversations');
+  String adminStatMessages(int n) => tr(
+        ar: '$n رسالة',
+        fr: '$n messages',
+        en: '$n messages',
+      );
+  String get adminStatModerated =>
+      tr(ar: 'قيد المراجعة', fr: 'Modérées', en: 'Moderated');
+  String get adminStatUnderReview => tr(
+        ar: 'إعلانات قيد المراجعة',
+        fr: 'Annonces en revue',
+        en: 'Listings under review',
+      );
+  String get adminPlansBreakdown => tr(
+        ar: 'توزيع الخطط',
+        fr: 'Répartition des plans',
+        en: 'Plan breakdown',
+      );
+  String get adminPlansBreakdownSub => tr(
+        ar: 'الاشتراكات النشطة حسب الصيغة',
+        fr: 'Abonnements actifs par formule',
+        en: 'Active subscriptions by plan',
+      );
+  String get adminNoPlanData => tr(
+        ar: 'لا توجد بيانات خطط حالياً.',
+        fr: 'Aucune donnée de plan pour le moment.',
+        en: 'No plan data yet.',
+      );
+  String get adminPlanFree =>
+      tr(ar: 'مجاني', fr: 'Gratuit', en: 'Free');
+  String get adminPlanBasic =>
+      tr(ar: 'أساسي', fr: 'Basique', en: 'Basic');
+  String get adminPlanProfessional =>
+      tr(ar: 'احترافي', fr: 'Professionnel', en: 'Professional');
+  String get adminPlanBusiness =>
+      tr(ar: 'أعمال', fr: 'Business', en: 'Business');
+  String get adminFilterPending =>
+      tr(ar: 'قيد الانتظار', fr: 'En attente', en: 'Pending');
+  String get adminFilterConfirmed =>
+      tr(ar: 'مؤكدة', fr: 'Confirmés', en: 'Confirmed');
+  String get adminFilterRejected =>
+      tr(ar: 'مرفوضة', fr: 'Refusés', en: 'Rejected');
+  String get adminFilterAll =>
+      tr(ar: 'الكل', fr: 'Tous', en: 'All');
+  String get adminNoPayments =>
+      tr(ar: 'لا مدفوعات', fr: 'Aucun paiement', en: 'No payments');
+  String get adminNoPaymentsPending => tr(
+        ar: 'كل شيء محدّث — لا مدفوعات معلّقة.',
+        fr: 'Tout est à jour — aucun paiement en attente.',
+        en: 'All clear — no pending payments.',
+      );
+  String get adminNoFilterResults => tr(
+        ar: 'لا نتائج لهذا التصفية.',
+        fr: 'Aucun résultat pour ce filtre.',
+        en: 'No results for this filter.',
+      );
+  String get adminPaymentDetails => tr(
+        ar: 'تفاصيل الدفع',
+        fr: 'Détails du paiement',
+        en: 'Payment details',
+      );
+  String get adminClient =>
+      tr(ar: 'العميل', fr: 'Client', en: 'Client');
+  String get adminOperator =>
+      tr(ar: 'المشغّل', fr: 'Opérateur', en: 'Operator');
+  String get adminMobileMoney =>
+      tr(ar: 'موبايل موني', fr: 'Mobile Money', en: 'Mobile Money');
+  String get adminPhone =>
+      tr(ar: 'الهاتف', fr: 'Téléphone', en: 'Phone');
+  String get adminEmailLabel =>
+      tr(ar: 'البريد', fr: 'E-mail', en: 'Email');
+  String get adminRef => tr(ar: 'المرجع', fr: 'Réf.', en: 'Ref.');
+  String get adminImageUnavailable => tr(
+        ar: 'الصورة غير متاحة',
+        fr: 'Image indisponible',
+        en: 'Image unavailable',
+      );
+  String get adminNoProof => tr(
+        ar: 'لم تُرفق أي لقطة شاشة.',
+        fr: 'Aucune capture fournie.',
+        en: 'No screenshot provided.',
+      );
+  String get adminFilterAllListings =>
+      tr(ar: 'الكل', fr: 'Toutes', en: 'All');
+  String get adminFilterActive =>
+      tr(ar: 'نشطة', fr: 'Actives', en: 'Active');
+  String get adminFilterModerated =>
+      tr(ar: 'مُراجعة', fr: 'Modérées', en: 'Moderated');
+  String get adminFilterSold =>
+      tr(ar: 'مُباعة', fr: 'Vendues', en: 'Sold');
+  String get adminFilterDrafts =>
+      tr(ar: 'مسودات', fr: 'Brouillons', en: 'Drafts');
+  String get adminNoListings =>
+      tr(ar: 'لا إعلانات', fr: 'Aucune annonce', en: 'No listings');
+  String get adminNoListingsFilter => tr(
+        ar: 'لا إعلان يطابق هذا التصفية.',
+        fr: 'Aucune annonce ne correspond à ce filtre.',
+        en: 'No listing matches this filter.',
+      );
+  String get adminChangeStatus => tr(
+        ar: 'تغيير الحالة',
+        fr: 'Changer le statut',
+        en: 'Change status',
+      );
+  String get adminActivate =>
+      tr(ar: 'تفعيل', fr: 'Activer', en: 'Activate');
+  String get adminModerate =>
+      tr(ar: 'مراجعة', fr: 'Modérer', en: 'Moderate');
+  String get adminMarkSold =>
+      tr(ar: 'وضع كمباع', fr: 'Marquer vendue', en: 'Mark as sold');
+  String get adminDraft =>
+      tr(ar: 'مسودة', fr: 'Brouillon', en: 'Draft');
+  String get adminNoSeller =>
+      tr(ar: 'بدون بائع', fr: 'Sans vendeur', en: 'No seller');
+  String get adminStatusPending =>
+      tr(ar: 'قيد الانتظار', fr: 'En attente', en: 'Pending');
+  String get adminStatusConfirmed =>
+      tr(ar: 'مؤكد', fr: 'Confirmé', en: 'Confirmed');
+  String get adminStatusRejected =>
+      tr(ar: 'مرفوض', fr: 'Refusé', en: 'Rejected');
+  String get adminStatusModerated =>
+      tr(ar: 'مُراجعة', fr: 'Modérée', en: 'Moderated');
+  String get adminStatusActive =>
+      tr(ar: 'نشطة', fr: 'Active', en: 'Active');
+  String get adminStatusSold =>
+      tr(ar: 'مُباعة', fr: 'Vendue', en: 'Sold');
+  String get adminStatusDraft =>
+      tr(ar: 'مسودة', fr: 'Brouillon', en: 'Draft');
+  String get supportEmailSubject => tr(
+        ar: 'دعم سوق تشاد',
+        fr: 'Support Souk Tchad',
+        en: 'Souk Tchad Support',
+      );
+  String get emailExampleHint =>
+      tr(ar: 'exemple@gmail.com', fr: 'exemple@gmail.com', en: 'example@gmail.com');
   String get orderReferenceLabel => tr(
         ar: 'مرجع الطلب',
         fr: 'Référence de commande',

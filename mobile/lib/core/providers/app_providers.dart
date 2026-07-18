@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/category_model.dart';
 import '../models/listing_model.dart';
 import '../models/user_model.dart';
@@ -312,8 +313,34 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
       final auth = ref.read(authServiceProvider);
       final user = await auth.loginWithGoogle();
       await _persistUser(user);
-      await ref.read(pushNotificationServiceProvider).enableAfterLogin();
-      await _refreshCatalog();
+      try {
+        await ref
+            .read(pushNotificationServiceProvider)
+            .enableAfterLogin()
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {}
+      try {
+        await _refreshCatalog().timeout(const Duration(seconds: 8));
+      } catch (_) {}
+      return user;
+    });
+  }
+
+  Future<void> loginWithGoogleAccount(GoogleSignInAccount account) async {
+    await _resetUserScopedState();
+    state = await AsyncValue.guard(() async {
+      final auth = ref.read(authServiceProvider);
+      final user = await auth.completeGoogleLogin(account);
+      await _persistUser(user);
+      try {
+        await ref
+            .read(pushNotificationServiceProvider)
+            .enableAfterLogin()
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {}
+      try {
+        await _refreshCatalog().timeout(const Duration(seconds: 8));
+      } catch (_) {}
       return user;
     });
   }

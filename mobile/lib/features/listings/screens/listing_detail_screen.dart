@@ -10,6 +10,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/utils/currency_format.dart';
+import '../../../core/widgets/back_or_home_button.dart';
 import '../widgets/listing_actions_bar.dart';
 import '../widgets/listing_photo.dart';
 
@@ -49,6 +50,7 @@ class _ListingDetailScreenState extends ConsumerState<ListingDetailScreen> {
       backgroundColor: AppColors.backgroundLight,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        leading: const BackOrHomeButton(),
         title: Text(strings.listingDetail),
         backgroundColor: Colors.transparent,
         elevation: 0,

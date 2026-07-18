@@ -6,36 +6,9 @@ import '../../../core/providers/server_config_provider.dart';
 import '../../home/providers/listings_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/widgets/app_logo.dart';
-import '../../../core/utils/google_config.dart';
+import '../../../core/widgets/google_auth_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/api_error.dart';
-
-/// Opens an improved login form in a centered modal dialog.
-Future<void> showLoginModal(
-  BuildContext context, {
-  String? redirectPath,
-}) {
-  return showDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    barrierColor: Colors.black.withValues(alpha: 0.45),
-    builder: (dialogContext) {
-      return Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420, maxHeight: 720),
-          child: LoginScreen(
-            asModal: true,
-            redirectPath: redirectPath,
-            onClose: () => Navigator.of(dialogContext).pop(),
-          ),
-        ),
-      );
-    },
-  );
-}
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({
@@ -43,11 +16,13 @@ class LoginScreen extends ConsumerStatefulWidget {
     this.asModal = false,
     this.redirectPath,
     this.onClose,
+    this.onCreateAccount,
   });
 
   final bool asModal;
   final String? redirectPath;
   final VoidCallback? onClose;
+  final VoidCallback? onCreateAccount;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -100,21 +75,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _passwordController.text.trim(),
           remember: _rememberMe,
         );
-    if (mounted) setState(() => _isLoading = false);
-  }
-
-  Future<void> _googleLogin() async {
-    if (!isGoogleSignInConfigured) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ref.read(stringsProvider).googleNotConfigured),
-          duration: const Duration(seconds: 8),
-        ),
-      );
-      return;
-    }
-    setState(() => _isLoading = true);
-    await ref.read(authStateProvider.notifier).loginWithGoogle();
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -317,35 +277,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 48,
-            child: OutlinedButton.icon(
-              onPressed: busy ? null : _googleLogin,
-              icon: const Icon(Icons.g_mobiledata, size: 28),
-              label: Text(strings.googleLogin),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primaryBlue,
-                side: BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          GoogleAuthButton(
+            label: strings.googleLogin,
+            onSuccess: () => _onLoginSuccess(),
+          ),
+          const SizedBox(height: 20),
+            TextButton(
+              onPressed: () {
+                if (widget.asModal && widget.onCreateAccount != null) {
+                  widget.onCreateAccount!();
+                } else if (widget.asModal) {
+                  widget.onClose?.call();
+                  context.push('/register');
+                } else {
+                  context.push('/register');
+                }
+              },
+              child: Text(
+                strings.createAccount,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.accentRed,
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          TextButton(
-            onPressed: () {
-              if (widget.asModal) widget.onClose?.call();
-              context.push('/register');
-            },
-            child: Text(
-              strings.createAccount,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.accentRed,
-              ),
-            ),
-          ),
           if (!widget.asModal) ...[
             TextButton(
               onPressed: () => context.go('/'),

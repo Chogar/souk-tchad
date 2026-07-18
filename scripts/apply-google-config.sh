@@ -63,6 +63,17 @@ fi
 
 bash "$ROOT/scripts/sync-google-ios.sh"
 
+# meta Google Sign-In pour le web
+INDEX_HTML="$ROOT/mobile/web/index.html"
+if [[ -f "$INDEX_HTML" ]]; then
+  if grep -q 'name="google-signin-client_id"' "$INDEX_HTML"; then
+    sed -i '' "s|content=\"[^\"]*apps.googleusercontent.com\"|content=\"${WEB_ID}\"|" "$INDEX_HTML"
+  else
+    sed -i '' "s|<meta name=\"theme-color\"|<meta name=\"google-signin-client_id\" content=\"${WEB_ID}\">\\n  <meta name=\"theme-color\"|" "$INDEX_HTML"
+  fi
+  echo "✓ web/index.html → google-signin-client_id"
+fi
+
 echo ""
 echo "✅ Google configuré."
 echo "   iOS  : $IOS_ID"

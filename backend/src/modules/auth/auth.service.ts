@@ -118,6 +118,11 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
+  /**
+   * Connexion / inscription Google.
+   * Si le compte n'existe pas → création automatique (e-mail vérifié).
+   * Si un compte e-mail existe déjà → liaison Google.
+   */
   async loginWithGoogle(dto: GoogleAuthDto) {
     const webClientId = this.configService.get<string>('google.clientId');
     const iosClientId = this.configService.get<string>('google.iosClientId');
@@ -136,12 +141,21 @@ export class AuthService {
         audience: audiences.length === 1 ? audiences[0] : audiences,
       });
       payload = ticket.getPayload();
-    } catch {
+    } catch (error) {
+      this.logger.warn(
+        `Google idToken rejeté: ${error instanceof Error ? error.message : error}`,
+      );
       throw new UnauthorizedException('Token Google invalide ou expiré');
     }
 
     if (!payload?.email || !payload.sub) {
       throw new UnauthorizedException('Token Google invalide');
+    }
+
+    if (payload.email_verified === false) {
+      throw new UnauthorizedException(
+        'E-mail Google non vérifié. Utilisez un autre compte Google.',
+      );
     }
 
     const email = payload.email.trim().toLowerCase();
@@ -155,6 +169,7 @@ export class AuthService {
         googleId: payload.sub,
         avatarUrl: payload.picture,
       });
+      this.logger.log(`Compte lié à Google: ${email}`);
     } else if (!user) {
       user = await this.usersService.createFromGoogle({
         email,
@@ -162,6 +177,12 @@ export class AuthService {
         googleId: payload.sub,
         avatarUrl: payload.picture,
       });
+      this.logger.log(`Compte Google créé: ${email}`);
+    }
+
+    if (!user.isEmailVerified) {
+      await this.usersService.verifyEmail(user.id);
+      user = (await this.usersService.findById(user.id)) ?? user;
     }
 
     return this.buildAuthResponse(user);
@@ -208,7 +229,8 @@ export class AuthService {
       email,
     };
 
-    if (this.skipsEmailVerification()) {
+    // Code affiché dans l'app UNIQUEMENT si SMTP absent (dev local).
+    if (!this.mailService.isConfigured()) {
       this.logger.warn(`[DEV] OTP inscription ${email}: ${code}`);
       response.devCode = code;
       response.message =

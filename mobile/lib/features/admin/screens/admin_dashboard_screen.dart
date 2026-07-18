@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/layout/app_breakpoints.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/providers/app_providers.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/services/admin_service.dart';
@@ -70,25 +71,23 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(stringsProvider);
     final user = ref.watch(authStateProvider).value;
     if (user == null || !user.isAdmin) {
       return Scaffold(
         backgroundColor: AppColors.backgroundLight,
         appBar: adminSubPageAppBar(
           context: context,
-          strings: ref.watch(stringsProvider),
-          title: 'Administration',
+          strings: strings,
+          title: strings.adminSectionTitle,
         ),
-        bottomNavigationBar: AdminBottomNavBar(
-          strings: ref.watch(stringsProvider),
-        ),
-        body: const _AccessDenied(),
+        bottomNavigationBar: AdminBottomNavBar(strings: strings),
+        body: _AccessDenied(strings: strings),
       );
     }
 
     final pendingCount =
         ref.watch(adminStatsProvider).asData?.value.paymentsPending ?? 0;
-    final strings = ref.watch(stringsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -116,13 +115,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
                   icon: const Icon(Icons.home_rounded),
                 ),
                 IconButton(
-                  tooltip: 'Actualiser',
+                  tooltip: strings.adminRefresh,
                   onPressed: _refresh,
                   icon: const Icon(Icons.refresh_rounded),
                 ),
               ],
               flexibleSpace: FlexibleSpaceBar(
-                background: _AdminHero(adminName: user.name),
+                background: _AdminHero(adminName: user.name, strings: strings),
               ),
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(52),
@@ -139,9 +138,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
                       fontSize: 13,
                     ),
                     tabs: [
-                      const Tab(
-                        icon: Icon(Icons.insights_rounded, size: 20),
-                        text: 'Vue d’ensemble',
+                      Tab(
+                        icon: const Icon(Icons.insights_rounded, size: 20),
+                        text: strings.adminOverviewTab,
                       ),
                       Tab(
                         icon: Badge(
@@ -153,11 +152,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
                             size: 20,
                           ),
                         ),
-                        text: 'Paiements',
+                        text: strings.adminPaymentsTab,
                       ),
-                      const Tab(
-                        icon: Icon(Icons.storefront_outlined, size: 20),
-                        text: 'Annonces',
+                      Tab(
+                        icon: const Icon(Icons.storefront_outlined, size: 20),
+                        text: strings.adminListingsTab,
                       ),
                     ],
                   ),
@@ -188,9 +187,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
 }
 
 class _AdminHero extends StatelessWidget {
-  const _AdminHero({required this.adminName});
+  const _AdminHero({required this.adminName, required this.strings});
 
   final String adminName;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -251,18 +251,18 @@ class _AdminHero extends StatelessWidget {
                         color: AppColors.accentGold.withValues(alpha: 0.45),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.verified_user_rounded,
                           size: 14,
                           color: AppColors.accentGold,
                         ),
-                        SizedBox(width: 6),
+                        const SizedBox(width: 6),
                         Text(
-                          'Espace administrateur',
-                          style: TextStyle(
+                          strings.adminSpaceLabel,
+                          style: const TextStyle(
                             color: AppColors.accentGold,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -273,7 +273,7 @@ class _AdminHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Bonjour, $adminName',
+                    strings.adminHello(adminName),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
@@ -283,7 +283,7 @@ class _AdminHero extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Stats, paiements et modération',
+                    strings.adminDashboardSubtitle,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.78),
                       fontSize: 13,
@@ -300,7 +300,9 @@ class _AdminHero extends StatelessWidget {
 }
 
 class _AccessDenied extends StatelessWidget {
-  const _AccessDenied();
+  const _AccessDenied({required this.strings});
+
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -323,13 +325,13 @@ class _AccessDenied extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Accès réservé',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            Text(
+              strings.adminAccessDeniedTitle,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
-              'Seuls les administrateurs peuvent ouvrir cet espace.',
+              strings.adminAccessDeniedBody,
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade600),
             ),
@@ -364,7 +366,7 @@ Future<void> _adminConfirmDialog({
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Annuler'),
+          child: Text(strings.cancel),
         ),
         FilledButton(
           style: FilledButton.styleFrom(
@@ -398,16 +400,18 @@ Future<void> _confirmPaymentAction({
 }) {
   return _adminConfirmDialog(
     context: context,
-    title: 'Confirmer le paiement ?',
-    message:
-        'Le plan ${order.plan} sera activé pour ${order.userName ?? 'cet utilisateur'}.',
-    confirmLabel: 'Confirmer',
+    title: strings.adminConfirmPaymentTitle,
+    message: strings.adminConfirmPaymentBody(
+      order.plan,
+      order.userName ?? strings.adminThisUser,
+    ),
+    confirmLabel: strings.adminConfirm,
     strings: strings,
     onConfirm: () async {
       await ref.read(adminServiceProvider).confirmPayment(order.id);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Paiement confirmé, plan activé.')),
+          SnackBar(content: Text(strings.adminPaymentConfirmed)),
         );
       }
       await onChanged();
@@ -424,9 +428,9 @@ Future<void> _confirmRejectAction({
 }) {
   return _adminConfirmDialog(
     context: context,
-    title: 'Refuser ce paiement ?',
-    message: 'Le paiement sera marqué comme refusé.',
-    confirmLabel: 'Refuser',
+    title: strings.adminRejectPaymentTitle,
+    message: strings.adminRejectPaymentBody,
+    confirmLabel: strings.adminReject,
     isDestructive: true,
     strings: strings,
     onConfirm: () async {
@@ -497,7 +501,7 @@ class _PaymentOrderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      order.userName ?? 'Utilisateur',
+                      order.userName ?? strings.adminUser,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -518,7 +522,7 @@ class _PaymentOrderCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _StatusBadge(status: order.status),
+              _StatusBadge(status: order.status, strings: strings),
             ],
           ),
           const SizedBox(height: 10),
@@ -533,10 +537,10 @@ class _PaymentOrderCard extends StatelessWidget {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _MetaItem(label: 'Plan', value: order.plan),
+                      _MetaItem(label: strings.adminPlan, value: order.plan),
                       const SizedBox(height: 6),
                       _MetaItem(
-                        label: 'Montant',
+                        label: strings.adminAmount,
                         value: CurrencyFormat.format(
                           order.amount.toDouble(),
                           strings.locale,
@@ -545,7 +549,7 @@ class _PaymentOrderCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       _MetaItem(
-                        label: 'Date',
+                        label: strings.adminDate,
                         value: dateFmt.format(order.createdAt.toLocal()),
                       ),
                     ],
@@ -553,11 +557,11 @@ class _PaymentOrderCard extends StatelessWidget {
                 : Row(
                     children: [
                       Expanded(
-                        child: _MetaItem(label: 'Plan', value: order.plan),
+                        child: _MetaItem(label: strings.adminPlan, value: order.plan),
                       ),
                       Expanded(
                         child: _MetaItem(
-                          label: 'Montant',
+                          label: strings.adminAmount,
                           value: CurrencyFormat.format(
                             order.amount.toDouble(),
                             strings.locale,
@@ -567,7 +571,7 @@ class _PaymentOrderCard extends StatelessWidget {
                       ),
                       Expanded(
                         child: _MetaItem(
-                          label: 'Date',
+                          label: strings.adminDate,
                           value: dateFmt.format(order.createdAt.toLocal()),
                         ),
                       ),
@@ -580,7 +584,7 @@ class _PaymentOrderCard extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: onShowDetails,
               icon: Icon(Icons.visibility_outlined, size: compact ? 16 : 18),
-              label: Text(compact ? 'Détails' : 'Voir les détails'),
+              label: Text(compact ? strings.adminDetails : strings.adminViewDetails),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primaryBlue,
                 visualDensity:
@@ -607,7 +611,7 @@ class _PaymentOrderCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: Text(compact ? 'Refuser' : 'Refuser'),
+                    child: Text(strings.adminReject),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -622,7 +626,7 @@ class _PaymentOrderCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: Text(compact ? 'OK' : 'Confirmer'),
+                    child: Text(compact ? 'OK' : strings.adminConfirm),
                   ),
                 ),
               ],
@@ -646,6 +650,7 @@ class _StatsTab extends ConsumerWidget {
       loading: () => const _LoadingState(),
       error: (e, _) => _ErrorState(
         message: apiErrorMessage(e, strings),
+        retryLabel: strings.retry,
         onRetry: () => ref.invalidate(adminStatsProvider),
       ),
       data: (stats) {
@@ -674,53 +679,53 @@ class _StatsTab extends ConsumerWidget {
                   final cards = [
                     _StatCard(
                       width: itemWidth,
-                      label: 'Utilisateurs',
+                      label: strings.adminStatUsers,
                       value: '${stats.usersTotal}',
-                      subtitle: '${stats.usersVerified} vérifiés',
+                      subtitle: strings.adminStatVerified(stats.usersVerified),
                       icon: Icons.people_alt_rounded,
                       color: AppColors.primaryBlue,
                     ),
                     _StatCard(
                       width: itemWidth,
-                      label: 'Annonces actives',
+                      label: strings.adminStatActiveListings,
                       value: '${stats.listingsActive}',
-                      subtitle: '${stats.listingsTotal} au total',
+                      subtitle: strings.adminStatTotalListings(stats.listingsTotal),
                       icon: Icons.storefront_rounded,
                       color: const Color(0xFF0F766E),
                     ),
                     _StatCard(
                       width: itemWidth,
-                      label: 'À confirmer',
+                      label: strings.adminStatToConfirm,
                       value: '${stats.paymentsPending}',
-                      subtitle: '${stats.paymentsPaid} déjà payés',
+                      subtitle: strings.adminStatAlreadyPaid(stats.paymentsPaid),
                       icon: Icons.hourglass_top_rounded,
                       color: const Color(0xFFB45309),
                       highlight: stats.paymentsPending > 0,
                     ),
                     _StatCard(
                       width: itemWidth,
-                      label: 'Revenus',
+                      label: strings.adminStatRevenue,
                       value: CurrencyFormat.format(
                         stats.revenueXaf.toDouble(),
                         strings.locale,
                       ),
-                      subtitle: 'Abonnements confirmés',
+                      subtitle: strings.adminStatConfirmedSubs,
                       icon: Icons.payments_rounded,
                       color: AppColors.accentRed,
                     ),
                     _StatCard(
                       width: itemWidth,
-                      label: 'Conversations',
+                      label: strings.adminStatConversations,
                       value: '${stats.conversations}',
-                      subtitle: '${stats.messages} messages',
+                      subtitle: strings.adminStatMessages(stats.messages),
                       icon: Icons.chat_bubble_rounded,
                       color: const Color(0xFF1D4ED8),
                     ),
                     _StatCard(
                       width: itemWidth,
-                      label: 'Modérées',
+                      label: strings.adminStatModerated,
                       value: '${stats.listingsModerated}',
-                      subtitle: 'Annonces en revue',
+                      subtitle: strings.adminStatUnderReview,
                       icon: Icons.gavel_rounded,
                       color: const Color(0xFF7C2D12),
                     ),
@@ -735,13 +740,13 @@ class _StatsTab extends ConsumerWidget {
               ),
               const SizedBox(height: 22),
               _SectionCard(
-                title: 'Répartition des plans',
-                subtitle: 'Abonnements actifs par formule',
+                title: strings.adminPlansBreakdown,
+                subtitle: strings.adminPlansBreakdownSub,
                 child: planTotal == 0
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Text(
-                          'Aucune donnée de plan pour le moment.',
+                          strings.adminNoPlanData,
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                       )
@@ -751,7 +756,7 @@ class _StatsTab extends ConsumerWidget {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 14),
                             child: _PlanBar(
-                              label: _planLabel(e.key),
+                              label: _planLabel(e.key, strings),
                               count: e.value,
                               ratio: ratio,
                               color: _planColor(e.key),
@@ -767,17 +772,17 @@ class _StatsTab extends ConsumerWidget {
     );
   }
 
-  String _planLabel(String key) {
+  String _planLabel(String key, AppStrings strings) {
     switch (key.toUpperCase()) {
       case 'FREE':
-        return 'Gratuit';
+        return strings.adminPlanFree;
       case 'BASIC':
-        return 'Basique';
+        return strings.adminPlanBasic;
       case 'PRO':
       case 'PROFESSIONAL':
-        return 'Professionnel';
+        return strings.adminPlanProfessional;
       case 'BUSINESS':
-        return 'Business';
+        return strings.adminPlanBusiness;
       default:
         return key;
     }
@@ -1044,25 +1049,25 @@ class _PaymentsTab extends ConsumerWidget {
             child: Row(
               children: [
                 _FilterChip(
-                  label: 'En attente',
+                  label: strings.adminFilterPending,
                   selected: filter == 'PENDING',
                   onTap: () => onFilterChanged('PENDING'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: 'Confirmés',
+                  label: strings.adminFilterConfirmed,
                   selected: filter == 'PAID',
                   onTap: () => onFilterChanged('PAID'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: 'Refusés',
+                  label: strings.adminFilterRejected,
                   selected: filter == 'CANCELLED',
                   onTap: () => onFilterChanged('CANCELLED'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: 'Tous',
+                  label: strings.adminFilterAll,
                   selected: filter.isEmpty,
                   onTap: () => onFilterChanged(''),
                 ),
@@ -1075,16 +1080,17 @@ class _PaymentsTab extends ConsumerWidget {
             loading: () => const _LoadingState(),
             error: (e, _) => _ErrorState(
               message: apiErrorMessage(e, strings),
+              retryLabel: strings.retry,
               onRetry: () => ref.invalidate(adminPaymentsProvider(filter)),
             ),
             data: (orders) {
               if (orders.isEmpty) {
                 return _EmptyState(
                   icon: Icons.inbox_outlined,
-                  title: 'Aucun paiement',
+                  title: strings.adminNoPayments,
                   subtitle: filter == 'PENDING'
-                      ? 'Tout est à jour — aucun paiement en attente.'
-                      : 'Aucun résultat pour ce filtre.',
+                      ? strings.adminNoPaymentsPending
+                      : strings.adminNoFilterResults,
                 );
               }
 
@@ -1194,16 +1200,16 @@ class _PaymentsTab extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Détails du paiement',
-                              style: TextStyle(
+                              strings.adminPaymentDetails,
+                              style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
-                          _StatusBadge(status: order.status),
+                          _StatusBadge(status: order.status, strings: strings),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -1212,15 +1218,15 @@ class _PaymentsTab extends ConsumerWidget {
                         runSpacing: 6,
                         children: [
                           _CompactDetail(
-                            label: 'Client',
-                            value: order.userName ?? 'Utilisateur',
+                            label: strings.adminClient,
+                            value: order.userName ?? strings.adminUser,
                           ),
                           _CompactDetail(
-                            label: 'Plan',
+                            label: strings.adminPlan,
                             value: order.plan,
                           ),
                           _CompactDetail(
-                            label: 'Montant',
+                            label: strings.adminAmount,
                             value: CurrencyFormat.format(
                               order.amount.toDouble(),
                               strings.locale,
@@ -1228,34 +1234,34 @@ class _PaymentsTab extends ConsumerWidget {
                             valueColor: AppColors.accentRed,
                           ),
                           _CompactDetail(
-                            label: 'Opérateur',
+                            label: strings.adminOperator,
                             value: order.providerLabel,
                           ),
                           _CompactDetail(
-                            label: 'Mobile Money',
+                            label: strings.adminMobileMoney,
                             value: order.payerReference ?? '—',
                           ),
                           _CompactDetail(
-                            label: 'Date',
+                            label: strings.adminDate,
                             value: dateFmt.format(order.createdAt.toLocal()),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       _CompactDetail(
-                        label: 'E-mail',
+                        label: strings.adminEmailLabel,
                         value: order.userEmail ?? '—',
                         fullWidth: true,
                       ),
                       if (order.userPhone != null &&
                           order.userPhone!.isNotEmpty)
                         _CompactDetail(
-                          label: 'Téléphone',
+                          label: strings.adminPhone,
                           value: order.userPhone!,
                           fullWidth: true,
                         ),
                       _CompactDetail(
-                        label: 'Réf.',
+                        label: strings.adminRef,
                         value: order.id,
                         fullWidth: true,
                         selectable: true,
@@ -1282,9 +1288,9 @@ class _PaymentsTab extends ConsumerWidget {
                                 height: 80,
                                 color: Colors.grey.shade200,
                                 alignment: Alignment.center,
-                                child: const Text(
-                                  'Image indisponible',
-                                  style: TextStyle(fontSize: 12),
+                                child: Text(
+                                  strings.adminImageUnavailable,
+                                  style: const TextStyle(fontSize: 12),
                                 ),
                               ),
                             ),
@@ -1300,9 +1306,9 @@ class _PaymentsTab extends ConsumerWidget {
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Text(
-                            'Aucune capture fournie.',
-                            style: TextStyle(fontSize: 12),
+                          child: Text(
+                            strings.adminNoProof,
+                            style: const TextStyle(fontSize: 12),
                           ),
                         ),
                       if (isPending) ...[
@@ -1328,7 +1334,7 @@ class _PaymentsTab extends ConsumerWidget {
                                     vertical: 10,
                                   ),
                                 ),
-                                child: const Text('Refuser'),
+                                child: Text(strings.adminReject),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -1351,7 +1357,7 @@ class _PaymentsTab extends ConsumerWidget {
                                     vertical: 10,
                                   ),
                                 ),
-                                child: const Text('Confirmer'),
+                                child: Text(strings.adminConfirm),
                               ),
                             ),
                           ],
@@ -1461,31 +1467,31 @@ class _ListingsTab extends ConsumerWidget {
             child: Row(
               children: [
                 _FilterChip(
-                  label: 'Toutes',
+                  label: strings.adminFilterAllListings,
                   selected: filter.isEmpty,
                   onTap: () => onFilterChanged(''),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: 'Actives',
+                  label: strings.adminFilterActive,
                   selected: filter == 'ACTIVE',
                   onTap: () => onFilterChanged('ACTIVE'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: 'Modérées',
+                  label: strings.adminStatModerated,
                   selected: filter == 'MODERATED',
                   onTap: () => onFilterChanged('MODERATED'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: 'Vendues',
+                  label: strings.adminFilterSold,
                   selected: filter == 'SOLD',
                   onTap: () => onFilterChanged('SOLD'),
                 ),
                 const SizedBox(width: 8),
                 _FilterChip(
-                  label: 'Brouillons',
+                  label: strings.adminFilterDrafts,
                   selected: filter == 'DRAFT',
                   onTap: () => onFilterChanged('DRAFT'),
                 ),
@@ -1498,14 +1504,15 @@ class _ListingsTab extends ConsumerWidget {
             loading: () => const _LoadingState(),
             error: (e, _) => _ErrorState(
               message: apiErrorMessage(e, strings),
+              retryLabel: strings.retry,
               onRetry: () => ref.invalidate(adminListingsProvider(filter)),
             ),
             data: (listings) {
               if (listings.isEmpty) {
-                return const _EmptyState(
+                return _EmptyState(
                   icon: Icons.inventory_2_outlined,
-                  title: 'Aucune annonce',
-                  subtitle: 'Aucune annonce ne correspond à ce filtre.',
+                  title: strings.adminNoListings,
+                  subtitle: strings.adminNoListingsFilter,
                 );
               }
 
@@ -1646,22 +1653,22 @@ class _ListingAdminCard extends StatelessWidget {
                   const Spacer(),
                   PopupMenuButton<String>(
                     padding: EdgeInsets.zero,
-                    tooltip: 'Changer le statut',
+                    tooltip: strings.adminChangeStatus,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                     onSelected: onStatusChanged,
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'ACTIVE', child: Text('Activer')),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(value: 'ACTIVE', child: Text(strings.adminActivate)),
                       PopupMenuItem(
                         value: 'MODERATED',
-                        child: Text('Modérer'),
+                        child: Text(strings.adminModerate),
                       ),
                       PopupMenuItem(
                         value: 'SOLD',
-                        child: Text('Marquer vendue'),
+                        child: Text(strings.adminMarkSold),
                       ),
-                      PopupMenuItem(value: 'DRAFT', child: Text('Brouillon')),
+                      PopupMenuItem(value: 'DRAFT', child: Text(strings.adminDraft)),
                     ],
                     icon: Icon(
                       Icons.more_vert_rounded,
@@ -1684,7 +1691,7 @@ class _ListingAdminCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                item.ownerName ?? 'Sans vendeur',
+                item.ownerName ?? strings.adminNoSeller,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1710,7 +1717,7 @@ class _ListingAdminCard extends StatelessWidget {
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  _StatusBadge(status: item.status),
+                  _StatusBadge(status: item.status, strings: strings),
                   Text(
                     CurrencyFormat.format(item.price, strings.locale),
                     style: TextStyle(
@@ -1781,39 +1788,40 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+  const _StatusBadge({required this.status, required this.strings});
 
   final String status;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
     final meta = switch (status.toUpperCase()) {
       'PENDING' => (
-        'En attente',
+        strings.adminStatusPending,
         const Color(0xFFB45309),
       ),
       'PAID' => (
-        'Confirmé',
+        strings.adminStatusConfirmed,
         const Color(0xFF0F766E),
       ),
       'REJECTED' => (
-        'Refusé',
+        strings.adminStatusRejected,
         AppColors.accentRed,
       ),
       'ACTIVE' => (
-        'Active',
+        strings.adminStatusActive,
         const Color(0xFF0F766E),
       ),
       'MODERATED' => (
-        'Modérée',
+        strings.adminStatusModerated,
         const Color(0xFFB45309),
       ),
       'SOLD' => (
-        'Vendue',
+        strings.adminStatusSold,
         AppColors.primaryBlue,
       ),
       'DRAFT' => (
-        'Brouillon',
+        strings.adminStatusDraft,
         Colors.blueGrey,
       ),
       _ => (status, AppColors.primaryBlue),
@@ -1934,10 +1942,15 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.onRetry,
+    required this.retryLabel,
+  });
 
   final String message;
   final VoidCallback onRetry;
+  final String retryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1962,7 +1975,7 @@ class _ErrorState extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Réessayer'),
+              label: Text(retryLabel),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primaryBlue,
               ),

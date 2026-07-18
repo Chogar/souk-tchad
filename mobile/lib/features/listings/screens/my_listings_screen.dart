@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/app_providers.dart';
+import '../../../core/widgets/back_or_home_button.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/utils/api_error.dart';
 import '../providers/my_listings_provider.dart';
@@ -19,7 +20,10 @@ class MyListingsScreen extends ConsumerWidget {
     final strings = ref.watch(stringsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.myListings)),
+      appBar: AppBar(
+        leading: const BackOrHomeButton(),
+        title: Text(strings.myListings),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showCreateListingModal(context),
         child: const Icon(Icons.add),

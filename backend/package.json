@@ -24,6 +24,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:dev": "ts-node -r tsconfig-paths/register src/database/seeds/run-dev-seed.ts",
     "seed:dev:reset": "RESET_DEMO=1 ts-node -r tsconfig-paths/register src/database/seeds/run-dev-seed.ts",
+    "test:smtp": "node scripts/test-smtp.js",
     "db:init-prod": "node dist/database/seeds/init-production-schema.js",
     "db:init-prod:cpanel": "bash scripts/cpanel-db-init.sh",
     "build:prod": "npm run build"

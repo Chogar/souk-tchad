@@ -10,6 +10,7 @@ import '../../../core/providers/app_providers.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/utils/currency_format.dart';
+import '../../../core/widgets/back_or_home_button.dart';
 import '../../home/providers/listings_provider.dart';
 import '../providers/my_listings_provider.dart';
 import '../utils/delete_listing_helper.dart';
@@ -241,7 +242,10 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     final strings = ref.watch(stringsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.editListing)),
+      appBar: AppBar(
+        leading: const BackOrHomeButton(),
+        title: Text(strings.editListing),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),

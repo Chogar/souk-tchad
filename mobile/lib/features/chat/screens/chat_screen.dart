@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -21,6 +19,7 @@ import '../../../core/services/chat_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_format.dart';
 import '../../../core/utils/time_format.dart';
+import '../../../core/widgets/back_or_home_button.dart';
 import 'conversations_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -126,8 +125,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _startRecording() async {
-    if (kIsWeb) return;
-
     final hasPermission = await _audioRecorder.hasPermission();
     if (!hasPermission) {
       if (mounted) {
@@ -138,11 +135,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
-    final dir = await getTemporaryDirectory();
-    final path =
-        '${dir.path}/voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
+    late final String path;
+    late final AudioEncoder encoder;
+    if (kIsWeb) {
+      // Sur le web, stop() renvoie une blob URL ; l’encodeur AAC n’est souvent
+      // pas supporté → Opus/WebM (ou WAV en secours).
+      final opusOk =
+          await _audioRecorder.isEncoderSupported(AudioEncoder.opus);
+      encoder = opusOk ? AudioEncoder.opus : AudioEncoder.wav;
+      path =
+          'voice_${DateTime.now().microsecondsSinceEpoch}.${opusOk ? 'webm' : 'wav'}';
+    } else {
+      encoder = AudioEncoder.aacLc;
+      final dir = await getTemporaryDirectory();
+      path =
+          '${dir.path}/voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
+    }
+
     await _audioRecorder.start(
-      const RecordConfig(encoder: AudioEncoder.aacLc),
+      RecordConfig(encoder: encoder),
       path: path,
     );
     setState(() => _isRecording = true);
@@ -164,11 +175,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       final bytes = await XFile(path).readAsBytes();
+      final filename = kIsWeb
+          ? (path.contains('.wav') ? 'voice.wav' : 'voice.webm')
+          : p.basename(path);
       final chat = ref.read(chatServiceProvider);
       final msg = await chat.sendVoiceMessage(
         widget.conversationId,
         bytes,
-        filename: p.basename(path),
+        filename: filename,
       );
       if (mounted) {
         _appendMessage(msg);
@@ -515,6 +529,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
+        leading: const BackOrHomeButton(),
         title: conv != null
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,18 +661,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     icon: const Icon(Icons.attach_file),
                     tooltip: strings.attachDocument,
                   ),
-                  if (!kIsWeb)
-                    IconButton.filled(
-                      onPressed: _uploading ? null : _toggleRecording,
-                      icon: Icon(
-                        _isRecording ? Icons.stop_circle : Icons.mic,
-                        color: _isRecording ? AppColors.accentRed : null,
-                      ),
-                      tooltip: _isRecording
-                          ? strings.recordingHint
-                          : strings.voiceMessage,
+                  IconButton.filled(
+                    onPressed: _uploading ? null : _toggleRecording,
+                    style: IconButton.styleFrom(
+                      backgroundColor: _isRecording
+                          ? AppColors.accentRed
+                          : AppColors.primaryBlue,
+                      foregroundColor: Colors.white,
                     ),
-                  if (!kIsWeb) const SizedBox(width: 4),
+                    icon: Icon(
+                      _isRecording ? Icons.stop_circle : Icons.mic,
+                    ),
+                    tooltip: _isRecording
+                        ? strings.recordingHint
+                        : strings.voiceMessage,
+                  ),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: TextField(
                       controller: _controller,

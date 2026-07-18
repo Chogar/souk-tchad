@@ -18,7 +18,7 @@ import '../../../core/utils/api_error.dart';
 import '../../../core/providers/theme_mode_provider.dart';
 import '../../../core/widgets/keyboard_scroll_view.dart';
 import '../../../core/layout/responsive_center.dart';
-import '../../auth/screens/login_screen.dart';
+import '../../auth/auth_modals.dart';
 import '../widgets/profile_hub_widgets.dart';
 import '../../listings/providers/my_listings_provider.dart';
 import '../../listings/screens/create_listing_screen.dart';
@@ -281,9 +281,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               color: AppColors.accentGold.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: const Text(
-              'Admin',
-              style: TextStyle(
+            child: Text(
+              strings.adminBadge,
+              style: const TextStyle(
                 color: Color(0xFF8A6D00),
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -355,7 +355,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final uri = Uri(
       scheme: 'mailto',
       path: strings.supportEmail,
-      queryParameters: {'subject': 'Support Souk Tchad'},
+      queryParameters: {'subject': strings.supportEmailSubject},
     );
     await _launchUri(uri.toString());
   }
@@ -408,6 +408,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
     ref.read(shellTabIndexProvider.notifier).setIndex(0);
+    // Route /profile autonome (URL directe ou redirection post-connexion) :
+    // la pile est vide, il faut revenir explicitement à l'accueil.
+    if (GoRouterState.of(context).matchedLocation != '/') {
+      context.go('/');
+    }
   }
 
   PreferredSizeWidget _profileAppBar(AppStrings strings, {bool showLogout = false}) {

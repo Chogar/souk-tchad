@@ -32,6 +32,8 @@ String apiErrorMessage(
         return strings.googleInvalidClient;
       case 'GOOGLE_NO_ID_TOKEN':
         return strings.googleInvalidClient;
+      case 'GOOGLE_USE_WEB_BUTTON':
+        return strings.googleUseWebButton;
     }
   }
 

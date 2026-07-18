@@ -1,9 +1,12 @@
-# Déploiement backend Souk Tchad sur LWS cPanel L2
+# Déploiement Souk Tchad sur LWS cPanel L2
 
-Guide pas à pas pour héberger l'API NestJS (PostgreSQL + Node.js) sur un hébergement **cPanel L2 LWS**.
+Guide pas à pas : **front web** + **API NestJS** sur hébergement **cPanel L2 LWS**.
 
-> **Prérequis LWS** : Node.js activé, PostgreSQL (Cloud cPanel), accès SSH, certificat SSL.
+> **Prérequis LWS** : Node.js activé, PostgreSQL (Cloud cPanel), FTP ou Terminal, certificat SSL.
 > Tutoriel LWS Node.js : https://tutoriels.lws.fr/divers/nodejs-cpanel
+
+> **Important** : `apisouk.experiencetech-td.com` héberge l’API **Expérience Tech**.  
+> L’API Souk Tchad utilise **`apisouktchad.experiencetech-td.com`**.
 
 ---
 
@@ -11,10 +14,13 @@ Guide pas à pas pour héberger l'API NestJS (PostgreSQL + Node.js) sur un hébe
 
 | Composant | Valeur |
 |-----------|--------|
+| Front web (Flutter) | `https://souk.experiencetech-td.com` |
+| API NestJS | `https://apisouktchad.experiencetech-td.com` |
 | Stack | NestJS 11 + PostgreSQL + Socket.io |
-| URL API (prod) | `https://apisouk.experiencetech-td.com` |
-| Point d'entrée | `dist/main.js` |
+| Point d'entrée API | `dist/main.js` |
 | Dossier uploads | `backend/uploads/` (writable) |
+| Paquets locaux | `deploy/souk-web-latest.zip`, `deploy/souk-backend-latest.zip` |
+| Script FTP/UAPI | `python3 scripts/deploy-lws.py` (besoin `CPANEL_USER` + `CPANEL_PASS`) |
 
 ### Limitations cPanel mutualisé
 
@@ -26,13 +32,17 @@ Guide pas à pas pour héberger l'API NestJS (PostgreSQL + Node.js) sur un hébe
 
 ## Phase 1 — Préparer le domaine (cPanel)
 
-### 1.1 Sous-domaine API (déjà défini)
+### 1.1 Sous-domaines
 
-**URL cible :** `https://apisouk.experiencetech-td.com`
+| Rôle | Sous-domaine | URL |
+|------|--------------|-----|
+| Front Flutter | `souk` (existant) | https://souk.experiencetech-td.com |
+| API NestJS | `apisouktchad` (à créer) | https://apisouktchad.experiencetech-td.com |
 
-1. Connectez-vous à **cPanel LWS** (`https://cpanel.experiencetech-td.com:2083` ou le lien fourni par LWS).
-2. Vérifiez que le sous-domaine **`apisouk`** existe (Domaines → Sous-domaines).
-3. Activez le **certificat SSL** (Let's Encrypt / AutoSSL) pour `apisouk.experiencetech-td.com`.
+1. Connectez-vous à **cPanel LWS** (`https://cpanel.experiencetech-td.com:2083`).
+2. **Domaines → Sous-domaines** : créez **`apisouktchad`** si besoin.
+3. Activez le **SSL** (Let's Encrypt / AutoSSL) pour `souk` et `apisouktchad`.
+4. Ne touchez pas à `apisouk` (API Expérience Tech).
 
 ### 1.2 Créer la base PostgreSQL
 
@@ -105,7 +115,7 @@ DATABASE_NAME=c2748744c_souktchad
 
 JWT_SECRET=une-cle-tres-longue-aleatoire-minimum-64-caracteres
 
-APP_URL=https://apisouk.experiencetech-td.com
+APP_URL=https://apisouktchad.experiencetech-td.com
 
 GOOGLE_CLIENT_ID=...
 SMTP_HOST=mail.experiencetech-td.com
@@ -139,7 +149,7 @@ Créez d'abord l'application pour générer le `nodevenv` :
 | Node.js version | **20** ou **24** LTS |
 | Application mode | **Production** |
 | Application root | `/home/VOTRE_USER/souk-tchad/backend` |
-| Application URL | `apisouk.experiencetech-td.com` |
+| Application URL | `apisouktchad.experiencetech-td.com` |
 | Application startup file | `dist/main.js` |
 
 4. Cliquez **Add Variable** pour chaque variable de `.env` **OU** laissez le fichier `.env` (NestJS ConfigModule le charge automatiquement depuis la racine backend).
@@ -193,8 +203,8 @@ Ensuite dans **Setup Node.js App** → **Restart** / **Start**.
 ### 6.1 Tests HTTP
 
 ```bash
-curl https://apisouk.experiencetech-td.com/
-curl https://apisouk.experiencetech-td.com/api/categories
+curl https://apisouktchad.experiencetech-td.com/
+curl https://apisouktchad.experiencetech-td.com/api/categories
 ```
 
 Réponse attendue : JSON avec les 9 catégories.
@@ -204,7 +214,7 @@ Réponse attendue : JSON avec les 9 catégories.
 Rebuild Flutter avec la nouvelle URL :
 
 ```bash
-flutter run --dart-define=API_BASE_URL=https://apisouk.experiencetech-td.com/api
+flutter run --dart-define=API_BASE_URL=https://apisouktchad.experiencetech-td.com/api
 ```
 
 Ou modifiez `mobile/.env` / CI pour la production.
@@ -213,7 +223,7 @@ Ou modifiez `mobile/.env` / CI pour la production.
 
 Dans [Google Cloud Console](https://console.cloud.google.com/) :
 
-- Ajoutez `https://apisouk.experiencetech-td.com` aux origines autorisées
+- Ajoutez `https://apisouktchad.experiencetech-td.com` aux origines autorisées
 - Mettez à jour `GOOGLE_CLIENT_ID` dans `.env`
 
 ---
@@ -250,7 +260,7 @@ bash scripts/cpanel-run.sh npm run build
 
 ## Checklist finale
 
-- [ ] Sous-domaine `apisouk.experiencetech-td.com` + SSL actif
+- [ ] Sous-domaines `souk` + `apisouktchad` + SSL actifs
 - [ ] Base PostgreSQL créée et `.env` rempli
 - [ ] `bash scripts/cpanel-run.sh npm ci` + `npm run build` OK
 - [ ] `bash scripts/cpanel-db-init.sh` exécuté (1×)

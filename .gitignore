@@ -29,6 +29,9 @@ mobile/android/key.properties
 # Archives
 *.zip
 
+# Paquets / secrets de déploiement LWS (locaux uniquement)
+deploy/
+
 # Uploads
 backend/uploads/
 

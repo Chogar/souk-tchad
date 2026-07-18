@@ -10,11 +10,15 @@ class ApiService {
     _dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+        // Réseaux mobiles lents (opérateurs Tchad) + démarrage à froid du
+        // serveur cPanel (~4 s) : timeouts larges sinon l'app abandonne.
+        connectTimeout: const Duration(seconds: 25),
+        receiveTimeout: const Duration(seconds: 45),
         headers: {'Content-Type': 'application/json'},
       ),
     );
+
+    _dio.interceptors.add(_RetryOnErrorInterceptor(() => _dio));
 
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -181,5 +185,51 @@ class ApiService {
       url = '$url${sep}token=${Uri.encodeQueryComponent(_memoryToken!)}';
     }
     return url;
+  }
+}
+
+/// Réessaie automatiquement les GET échoués sur erreur réseau/timeout :
+/// indispensable sur les réseaux mobiles instables (coupures brèves).
+class _RetryOnErrorInterceptor extends Interceptor {
+  _RetryOnErrorInterceptor(this._dioGetter);
+
+  final Dio Function() _dioGetter;
+  static const _maxRetries = 2;
+  static const _retryDelays = [Duration(seconds: 1), Duration(seconds: 3)];
+
+  bool _shouldRetry(DioException err) {
+    if (err.requestOptions.method.toUpperCase() != 'GET') return false;
+    switch (err.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.connectionError:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  @override
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    final attempt = (err.requestOptions.extra['retry_attempt'] as int?) ?? 0;
+    if (!_shouldRetry(err) || attempt >= _maxRetries) {
+      handler.next(err);
+      return;
+    }
+
+    await Future<void>.delayed(_retryDelays[attempt]);
+
+    final options = err.requestOptions;
+    options.extra['retry_attempt'] = attempt + 1;
+    try {
+      final response = await _dioGetter().fetch<dynamic>(options);
+      handler.resolve(response);
+    } on DioException catch (retryErr) {
+      handler.next(retryErr);
+    }
   }
 }

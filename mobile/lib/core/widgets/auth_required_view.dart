@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../providers/app_providers.dart';
 import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
-import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/auth_modals.dart';
 
 class AuthRequiredView extends ConsumerWidget {
   const AuthRequiredView({
@@ -61,7 +60,10 @@ class AuthRequiredView extends ConsumerWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.push('/register'),
+                onPressed: () => showRegisterModal(
+                  context,
+                  redirectPath: redirectPath,
+                ),
                 icon: const Icon(Icons.person_add_outlined),
                 label: Text(strings.createAccount),
               ),

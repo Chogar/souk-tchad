@@ -11,7 +11,7 @@ import '../../../core/l10n/app_strings.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/utils/api_error.dart';
 import '../../../core/utils/currency_format.dart';
-import '../../auth/screens/login_screen.dart';
+import '../../auth/auth_modals.dart';
 import '../../chat/screens/conversations_screen.dart';
 import 'listing_photo.dart';
 
