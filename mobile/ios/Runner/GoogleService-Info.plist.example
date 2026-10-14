@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  1. Console Firebase → Ajouter une app iOS (bundle: com.hassanechogar.souktchad)
+  1. Console Firebase → Ajouter une app iOS (bundle: td.experience.souktchad)
   2. Télécharger GoogleService-Info.plist
   3. Copier vers ios/Runner/GoogleService-Info.plist (sans .example)
   4. Xcode → Signing & Capabilities → Push Notifications
@@ -15,6 +15,6 @@
 	<key>PROJECT_ID</key>
 	<string>YOUR_PROJECT_ID</string>
 	<key>BUNDLE_ID</key>
-	<string>com.hassanechogar.souktchad</string>
+	<string>td.experience.souktchad</string>
 </dict>
 </plist>

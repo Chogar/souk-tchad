@@ -1,4 +1,4 @@
-package com.hassanechogar.souktchad
+package td.experience.souktchad
 
 import io.flutter.embedding.android.FlutterActivity
 
