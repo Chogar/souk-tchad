@@ -1,5 +1,54 @@
-# Copier vers android/key.properties (non versionné) et renseigner le keystore.
-storePassword=CHANGE_ME
-keyPassword=CHANGE_ME
-keyAlias=souk-tchad
-storeFile=../keystore/souk-tchad-upload.jks
+# Fichier de configuration du keystore pour la signature de l'APK/AAB en release
+# Copier ce fichier vers key.properties et remplir avec vos vraies valeurs
+# IMPORTANT : key.properties ne doit JAMAIS être commité dans Git (déjà dans .gitignore)
+
+# Chemin vers le fichier keystore (relatif à android/)
+storeFile=upload-keystore.jks
+
+# Mot de passe du keystore
+storePassword=VOTRE_STORE_PASSWORD
+
+# Alias de la clé dans le keystore
+keyAlias=upload
+
+# Mot de passe de la clé
+keyPassword=VOTRE_KEY_PASSWORD
+
+# ============================================================================
+# INSTRUCTIONS POUR GÉNÉRER LE KEYSTORE
+# ============================================================================
+#
+# 1. Générer le keystore (à faire UNE SEULE FOIS) :
+#
+#    cd mobile/android
+#    keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA \
+#            -keysize 2048 -validity 10000 -alias upload
+#
+#    Vous serez invité à entrer :
+#    - Un mot de passe pour le keystore (storePassword)
+#    - Vos informations (nom, organisation, ville, etc.)
+#    - Un mot de passe pour la clé (keyPassword)
+#
+# 2. SAUVEGARDER LE KEYSTORE ET LES MOTS DE PASSE EN LIEU SÛR !
+#    Si vous perdez le keystore, vous ne pourrez plus mettre à jour votre app.
+#
+# 3. Copier ce fichier et remplir les valeurs :
+#
+#    cp key.properties.example key.properties
+#    # Éditer key.properties avec vos vraies valeurs
+#
+# 4. Builder l'APK/AAB de release :
+#
+#    flutter build appbundle --release --dart-define-from-file=dart_defines.json
+#    # ou
+#    flutter build apk --release --dart-define-from-file=dart_defines.json
+#
+# ============================================================================
+# IMPORTANT POUR LE PLAY STORE
+# ============================================================================
+#
+# - Pour le premier upload, vous pouvez utiliser n'importe quel keystore
+# - Google Play App Signing : recommandé (Google gère la clé finale)
+# - Gardez toujours une copie du keystore dans un endroit sécurisé
+# - Ne partagez jamais le keystore ou les mots de passe sur Git/Slack/Email
+#
