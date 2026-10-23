@@ -5,6 +5,39 @@ Ce document remplace l'historique des chats Cursor pour les collaborateurs.
 
 ---
 
+## Octobre 2026 — Préparation publication Play Store
+
+### Changement de package (14 octobre 2026)
+
+**Package modifié** : `com.hassanechogar.souktchad` → `td.experience.souktchad`
+
+**Raison** : Préparation pour la publication sur Google Play Store avec un identifiant professionnel représentant "Experience TD".
+
+**Fichiers modifiés** :
+- Android : `build.gradle.kts`, `MainActivity.kt`, `google-services.json.example`
+- iOS : `project.pbxproj`, `GoogleService-Info.plist.example`
+
+**Documentation créée** :
+- `docs/PUBLICATION-PLAY-STORE.md` — Guide complet de publication
+- `mobile/android/README-RELEASE.md` — Configuration release Android
+- `mobile/android/key.properties.example` — Template keystore
+- `CHANGEMENT-PACKAGE.md` — Récapitulatif du changement
+
+**Scripts créés** :
+- `scripts/generate-keystore.sh` — Génération automatique du keystore
+- `scripts/build-release.sh` — Build automatique AAB/APK
+
+**Actions requises avant publication** :
+1. Reconfigurer Firebase avec le nouveau package
+2. Mettre à jour Google OAuth Client IDs
+3. Générer le keystore de production
+4. Configurer les services backend en production (SMTP, etc.)
+5. Remplacer l'ID AdMob de test par un ID de production
+
+**Impact** : Nouvelle application sur le Play Store (pas de mise à jour d'une app existante).
+
+---
+
 ## Architecture
 
 - **Monorepo** : `backend/` NestJS + PostgreSQL, `mobile/` Flutter (Android, iOS, Web)

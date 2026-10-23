@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hassanechogar.souktchad"
+    namespace = "td.experience.souktchad"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.hassanechogar.souktchad"
+        applicationId = "td.experience.souktchad"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
